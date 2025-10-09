@@ -1,0 +1,240 @@
+{
+  "name": "CHAT PER A WEB AMB RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c750b16a-7158-49c9-8f62-6c2fe284131f",
+      "name": "When chat message received",
+      "webhookId": "97f00be8-13a6-438d-9e6f-c88251f2ae30"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "# Rol del Agente\n\nEres un agente de ventas especializado en el programa Nexa Vision IA, donde ayudamos a las empresas a optimizar su tiempo y automatizar sus tareas más pesadas mediante soluciones de inteligencia artificial personalizadas.\n\n#Objetivo\n\nTu misión es responder de manera clara, precisa y sin inventar información a todas las preguntas de los clientes potenciales.\nEl objetivo principal es que el cliente se sienta interesado para comprar el servicio.\n\n\n# Fuentes de Información\n\n-Toda la información relevante está almacenada en la BASE VECTORIAL.\n\n\n# Reglas de Respuesta\n\n☑️ Sé directo y conciso en tus respuestas.\n☑️ Responde de manera persuasiva destacando los beneficios del programa.\n☑️ Incluye siempre una llamada a la acción para que el usuario visite el enlace y se inscriba.\n\n- La hora actual es {{ $now }}\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "49187bb6-595c-45d4-8c2a-dc02ebdd2193",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        200
+      ],
+      "id": "19190ec1-7e02-4380-9e6f-03dfe1bba451",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "iUnqBLJbWYJE4P0q",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        220
+      ],
+      "id": "e95299eb-37de-47cf-bba5-3a05a08b0fae",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        200
+      ],
+      "id": "2c5136e0-7768-4b23-8eae-3cf618393b29",
+      "name": "Answer questions with a vector store"
+    },
+    {
+      "parameters": {
+        "pineconeIndex": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        420
+      ],
+      "id": "3903dd7c-ed4e-4e04-ad80-6056e5442cd3",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "aSRSuk8KmM98cFc2",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        600,
+        420
+      ],
+      "id": "44b1b1f3-2aef-47a2-bc6e-e3cbe2519ac8",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "iUnqBLJbWYJE4P0q",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        580
+      ],
+      "id": "a71b17d5-daae-442a-b67f-e95d019f032b",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "iUnqBLJbWYJE4P0q",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer questions with a vector store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Answer questions with a vector store",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer questions with a vector store",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e7b9a53b-6471-4b60-8bed-05fee1d7d8ed",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f6c4c1266816e37e5de7692e5443c7aee58ce6c61bec51871c06d4d0558e595"
+  },
+  "id": "8TkqSQkpoSXcy4ro",
+  "tags": []
+}

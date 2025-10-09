@@ -1,0 +1,519 @@
+{
+  "name": "Telegram asistant",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "id": "5b4322b8-4c1c-4dc9-95a9-ba651a57aa5e",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        420
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "iUnqBLJbWYJE4P0q",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}{{ $json.text }}",
+        "options": {
+          "systemMessage": "=# Visio general\nEts un assistent de calendari. Les teves responsabilitats inclouen crear, obtenir i suprimir esdeveniments en el calendari de l'usuari.\n\n**Eines de Gestió del Calendari**  \n   - Fes servir \"Create Event with Attendee\" quan un esdeveniment inclogui un participant.  \n   - Fes servir \"Create Event\" per a esdeveniments individuals.   \n   - Fes servir \"Get Events\"  per consultar els horaris del calendari quan es demani.\n   - Fes servir \"Delete Event\" per suprimir un esdeveniment. Has d’utilitzar \"Get Events\" primer per obtenir l’ID de l’esdeveniment que vols suprimir.\n   - Fes servir \"Update Event\" per modificar un esdeveniment. Has d’utilitzar \"Get Events\" primer per obtenir l’ID de l’esdeveniment que vols modificar.\n   - Fes servir \"Gmail:Send Message\" per enviar un correu electrònic de confirmació amb l’enllaç de la reunió a la persona. (També pots utilitzar aquesta eina per enviar altres missatges si es demana. Sempre signes: Roger Pumarola al final.)\n\n## Notes Finals\nAquí tens la data/hora actual: {{ $now }}\nSi no s’especifica la durada d’un esdeveniment, assumeix que serà d’una hora."
+        }
+      },
+      "id": "0cb5420c-58a7-43d5-991d-48b341ff67b2",
+      "name": "Calendar Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        160,
+        220
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "start": "={{ $fromAI(\"eventStart\") }}",
+        "end": "={{ $fromAI(\"eventEnd\") }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $fromAI(\"eventAttendeeEmail\") }}"
+          ],
+          "summary": "={{ $fromAI(\"eventTitle\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        620,
+        320
+      ],
+      "id": "bafbc846-e51f-43a4-be5a-e548ba5b4449",
+      "name": "Create Event with Attendee",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "start": "={{ $fromAI(\"eventStart\") }}",
+        "end": "={{ $fromAI(\"eventEnd\") }}",
+        "additionalFields": {
+          "attendees": [],
+          "summary": "={{ $fromAI(\"eventTitle\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        580,
+        480
+      ],
+      "id": "895def22-94c2-4b9c-98a3-beb61d0f2299",
+      "name": "Create Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "timeMin": "={{ $fromAI(\"dayBefore\",\"the day before the date the user requested\") }}",
+        "timeMax": "={{ $fromAI(\"dayAfter\",\"the day after the date the user requested\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        520
+      ],
+      "id": "e1af68fe-71b5-491e-bd9b-9489ba884eb0",
+      "name": "Get Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "eventId": "={{ $fromAI(\"eventID\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        380,
+        540
+      ],
+      "id": "5a08f2f2-56f3-4388-8ee2-bc56d13c917c",
+      "name": "Delete Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "eventId": "={{ $fromAI(\"eventID\") }}",
+        "updateFields": {
+          "end": "={{ $fromAI(\"endTime\") }}",
+          "start": "={{ $fromAI(\"startTime\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        520
+      ],
+      "id": "7a86c1e1-9490-4ab6-978c-095854000475",
+      "name": "Update Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -320,
+        200
+      ],
+      "id": "e0b32e11-890e-4a1e-a0ed-95f5ac0db3f0",
+      "name": "Telegram Trigger",
+      "webhookId": "96c90842-bddf-4df0-a0ab-cf023d55b26d",
+      "credentials": {
+        "telegramApi": {
+          "id": "LjzFowse2deI7Ken",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        160
+      ],
+      "id": "b22f067b-a862-4127-97a6-4b5ce1f3636c",
+      "name": "Telegram",
+      "webhookId": "282227d7-4665-4d3c-9d69-6d0f64ad1aa1",
+      "credentials": {
+        "telegramApi": {
+          "id": "LjzFowse2deI7Ken",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "233753eb-240d-4218-a054-45cc95a5e48f",
+              "leftValue": "={{ $json.message.voice }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -140,
+        200
+      ],
+      "id": "6159d37a-e2f3-4240-95fa-dd448121e06c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {
+          "language": "es"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        160,
+        0
+      ],
+      "id": "5328abc3-ed88-4b29-b7aa-2eeead1bf9db",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "iUnqBLJbWYJE4P0q",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e4016679-41da-4e2d-9c5b-185dfc51f9ee",
+      "name": "Telegram1",
+      "webhookId": "4f2a4272-4cf1-470d-9ca5-54a1149998bb",
+      "credentials": {
+        "telegramApi": {
+          "id": "LjzFowse2deI7Ken",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('If').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        140,
+        420
+      ],
+      "id": "96553b02-6147-41d0-a4e6-188384954a68",
+      "name": "Window Buffer Memory"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        700,
+        480
+      ],
+      "id": "b70afcf4-6f5c-4b6f-a511-f825ed47f7b1",
+      "name": "Gmail",
+      "webhookId": "af91e711-5411-45f5-9e3b-ec11858a448a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fkbVpVvhUyxl6630",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event with Attendee": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Events": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram1": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a4fb3172-f7b0-4972-8e0b-25411f363350",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f6c4c1266816e37e5de7692e5443c7aee58ce6c61bec51871c06d4d0558e595"
+  },
+  "id": "FxgaeNXuR7vih0ut",
+  "tags": []
+}

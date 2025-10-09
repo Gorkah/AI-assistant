@@ -1,0 +1,720 @@
+{
+  "name": "MCP general",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "da204136-a725-46d8-8faf-53d4630b1e96"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f0ed38df-f3dc-4917-a8f8-43c84524dacb",
+      "name": "MCP Server Trigger",
+      "webhookId": "da204136-a725-46d8-8faf-53d4630b1e96"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        -200,
+        260
+      ],
+      "id": "2b195d2e-dbab-4253-8255-6bf5f7a86075",
+      "name": "Send",
+      "webhookId": "fc906579-ac64-450b-b26c-867a4b4dac84",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fkbVpVvhUyxl6630",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        260
+      ],
+      "id": "00147375-f3fd-4fd6-b617-b74a6badc60b",
+      "name": "Reply",
+      "webhookId": "66e4c82e-9eee-472f-900f-a5f79e1cea14",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fkbVpVvhUyxl6630",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "html",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        20,
+        260
+      ],
+      "id": "3e22a2ba-ad68-409e-9052-f1d0b0bf798f",
+      "name": "Draft",
+      "webhookId": "b978c569-4e6e-43eb-8d46-b5587d5183f4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fkbVpVvhUyxl6630",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        200,
+        420
+      ],
+      "id": "a0ae2e62-4e8e-46d5-b869-6c55664e170f",
+      "name": "Comprobar disponibilidad",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Utiliza la API de Google Calendar para eliminar eventos del calendario.",
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {
+          "sendUpdates": "all"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        420
+      ],
+      "id": "ee2c826c-288e-46bf-834e-d4eddabc4d71",
+      "name": "Eliminar eventos",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Conéctate a la API de Google Calendar para crear nuevos eventos en el calendario.",
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Attendees', ``, 'string') }}"
+          ],
+          "conferenceDataUi": {},
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        460,
+        420
+      ],
+      "id": "4e062dc7-d3ed-42b9-b404-9cc2bf02e801",
+      "name": "Crear evento",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "rogerpuma7@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rogerpuma7@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "updateFields": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        600,
+        420
+      ],
+      "id": "d708675f-0599-497a-a1db-31316d3f4868",
+      "name": "Actualizar eventos",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "P0UxUcPIZCrTtd86",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "filters": {
+          "readStatus": "unread",
+          "receivedAfter": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Received_After', ``, 'string') }}",
+          "receivedBefore": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Received_Before', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        120,
+        260
+      ],
+      "id": "2e2c8541-e8bc-4605-8352-3bbf06781384",
+      "name": "Gmail - comprobar emails",
+      "webhookId": "84c0bb51-b590-4211-9cbf-f2012d67f9ed",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fkbVpVvhUyxl6630",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}",
+        "labelIds": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Label_Names_or_IDs', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        -320,
+        260
+      ],
+      "id": "157c11e3-74fc-4b04-86a0-bf7b05a018ab",
+      "name": "Gmail - Anadir etiqueta",
+      "webhookId": "576c0122-01e0-42a0-834e-324791ec5061",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fkbVpVvhUyxl6630",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "task": "MDMzNjI2NzQwMTkzMDU3MTE3NTU6MDow",
+        "title": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Title', ``, 'string') }}",
+        "additionalFields": {
+          "status": "needsAction"
+        }
+      },
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        840,
+        140
+      ],
+      "id": "31742d54-3c64-4baf-b610-7112789e7eb0",
+      "name": "Google Tasks - Crear tarea"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "task": "MDMzNjI2NzQwMTkzMDU3MTE3NTU6MDow",
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "additionalFields": {
+          "showCompleted": false
+        }
+      },
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        700,
+        140
+      ],
+      "id": "8fcea9a4-c8ac-4cfc-9a7c-c72e57b76f4e",
+      "name": "Google Tasks - Comprobar tareas pendientes"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "verifica el task ID con el nombre de la tarea.",
+        "operation": "update",
+        "task": "MDMzNjI2NzQwMTkzMDU3MTE3NTU6MDow",
+        "taskId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Task_ID', ``, 'string') }}",
+        "updateFields": {
+          "completed": "={{ $now }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        560,
+        140
+      ],
+      "id": "a472ee2f-4d0d-46ff-b807-16ad01242b69",
+      "name": "Google Tasks - Actualizar tareas"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "task": "MDMzNjI2NzQwMTkzMDU3MTE3NTU6MDow",
+        "taskId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Task_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        420,
+        140
+      ],
+      "id": "f3f1ccbf-9f20-4efb-a1d7-06cc2f923f20",
+      "name": "Google Tasks - Eliminar tarea"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        760,
+        440
+      ],
+      "id": "aca507ea-69b2-4daa-987e-3c561e611a32",
+      "name": "Get",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "evmqSeMYUQQjzzev",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        860,
+        440
+      ],
+      "id": "2d86c7ba-5344-486e-b064-9614bd89fed6",
+      "name": "Update",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "evmqSeMYUQQjzzev",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        960,
+        440
+      ],
+      "id": "11f5f6a3-8544-4472-9de1-8f37a5ba8ef0",
+      "name": "Delete",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "evmqSeMYUQQjzzev",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        580,
+        -40
+      ],
+      "id": "d326ad4e-ca2d-4979-ab44-390b7fc32248",
+      "name": "Create or Update"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filterByFormula": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Filter_By_Formula', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        700,
+        -40
+      ],
+      "id": "bb593c0d-9d04-422f-ac63-72fd52359f70",
+      "name": "Search"
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Record_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        840,
+        -40
+      ],
+      "id": "87ccff5a-2d39-4f20-b20b-336cfdb543a3",
+      "name": "Get1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Send": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar disponibilidad": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eliminar eventos": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear evento": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar eventos": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - comprobar emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Anadir etiqueta": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Tasks - Eliminar tarea": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Tasks - Actualizar tareas": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Tasks - Comprobar tareas pendientes": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Tasks - Crear tarea": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or Update": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get1": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "919ed20b-07c4-4796-b471-d2efd4eea313",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f6c4c1266816e37e5de7692e5443c7aee58ce6c61bec51871c06d4d0558e595"
+  },
+  "id": "RfOOxf9pu29GwIhK",
+  "tags": []
+}

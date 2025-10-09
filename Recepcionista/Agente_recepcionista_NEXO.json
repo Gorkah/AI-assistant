@@ -1,0 +1,1017 @@
+{
+  "name": "Agente recepcionista",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "424a3080-4473-47fb-8b32-6fdeede8f02b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        660
+      ],
+      "id": "0d4d2aeb-aba9-4820-acda-d2944591ce61",
+      "name": "Recepción de mensajes",
+      "webhookId": "424a3080-4473-47fb-8b32-6fdeede8f02b"
+    },
+    {
+      "parameters": {
+        "resource": "chat-api",
+        "operation": "get-media-base64",
+        "instanceName": "NEXO soluciones IA",
+        "messageId": "={{ $json.body.data.key.id }}"
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        460
+      ],
+      "id": "24f38b6d-0627-41c2-a37f-41e85f0e69be",
+      "name": "Captación de audio",
+      "credentials": {
+        "evolutionApi": {
+          "id": "mZwrv4xObHrnHKeC",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat-api",
+        "operation": "read-messages",
+        "instanceName": "={{ $('Recepción de mensajes').item.json.body.instance }}",
+        "remoteJid": "={{ $('Edit Fields').item.json.numero_telefono }}",
+        "messageId": "={{ $('Edit Fields').item.json.body.data.key.id }}"
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        540
+      ],
+      "id": "4f0baff0-7a3d-4b21-9ba6-1eb5874296e4",
+      "name": "Leer mensaje",
+      "credentials": {
+        "evolutionApi": {
+          "id": "mZwrv4xObHrnHKeC",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Recepción de mensajes').item.json.body.instance }}",
+        "remoteJid": "={{ $('Recepción de mensajes').item.json.body.data.key.remoteJid }}",
+        "messageText": "={{ $('AI Agent').item.json.output }}",
+        "options_message": {
+          "delay": 1200
+        }
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1880,
+        540
+      ],
+      "id": "2c3c27bc-8f98-4a96-913b-aa8f7f8a2889",
+      "name": "Mensaje de respuesta",
+      "credentials": {
+        "evolutionApi": {
+          "id": "mZwrv4xObHrnHKeC",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "integrations-api",
+        "operation": "evolution-bot",
+        "instanceName": "={{ $('Recepción de mensajes').item.json.body.instance }}",
+        "resourceForEvolutionBot": "changeStatusEvolutionBot",
+        "evolutionBotId": "={{ $('Recepción de mensajes').item.json.body.data.key.id }}",
+        "remoteJid": "={{ $('Recepción de mensajes').item.json.body.data.key.remoteJid }}",
+        "status": "closed"
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        2060,
+        540
+      ],
+      "id": "13afd117-c926-40be-9565-fb556adb9c63",
+      "name": "Cierre de  conversación",
+      "credentials": {
+        "evolutionApi": {
+          "id": "mZwrv4xObHrnHKeC",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Mensaje del usuario: {{ $('Edit Fields').item.json.mensaje_usuario }}\nEl numero de telefono del usuario es:{{ $('Edit Fields').item.json.numero_telefono }} \nLa fecha de hoy es: {{$now.toFormat('dd/MM/yyyy HH:mm')}}",
+        "options": {
+          "systemMessage": "=# Rol  \nEres el asistente virtual de atención al cliente del mi agencia de IA NEXO soluciones IA. Estás diseñado para asistir de forma eficiente, clara y ordenada a los clientes en la gestión, creación, modificación y cancelación de citas utilizando las herramientas que se mencionan en el resto del prompt.\n\n# Tarea  \nTu función principal es asistir a los clientes en la reserva, modificación o cancelación de citas. Debes verificar si el usuario ya existe en la base de datos y darle un mensaje de bien venida apropiado en su primer mensaje. Luego guíalo en la gestión de su cita o reunión. Esta tarea tan importante la delegamos completamente en ti y dependemos de ti para ofrecer el mejor servicio en nuestra empresa. Te daremos USD200 de comisión si realizar tu tarea correctamente, de lo cotrario optaremos por cambiar de sistema si es que no cumples con nuestras expectativas.\nSiempre interpreta la solicitud del usuario y siempre utiliza las herramientas que tienens a disposición para dar una respuesta.\n\n# Pasos:\n1. Identificación del usuario primer mensaje: \n   - Usa la herramienta \"comprobar_nombre\" para verificar si el usuario existe en la base de datos.  \n   - Si es un usuario antiguo o nuevo, dale la bienvenida con un mensaje personalizado.  \n\n2. Manejo del mensaje de bienvenida:\n   - Si el usuario es nuevo, envía:  \n       \n     Hola, qué gusto tenerte aquí. 🎉 Soy el asistente de IA de NEXO y estoy para ayudarte en lo que necesites.  \n     ¿Me podrías decir tu nombre y apellido? 😊\n\n   - Si el usuario es antiguo, **solo en la primera interacción**, envía:  \n     \n     Hola {nombre y apellido}, ¡qué bueno tenerte de vuelta! 😊  \n\n   - **No repitas el mensaje de bienvenida en cada respuesta posterior.**  \n\n3. Registro de usuario:\n   - Si el usuario es nuevo, agrégalo a la base de datos mediante la herramienta \"crear_nuevo_usuario\". \n\n4. **Segundo mensaje**\n  - Para usuario nuevo: \"¿Para cuándo quiere reservar una reunión?\"\n  - Para usuario antiguo: \"¿Quiere reservan, modificar o eliminar una cita?\"\n\n5. **Crear cita**\n  - Para poder crear una cita o reunión, toma como entrada la fecha que indica el usuario y utiliza la herramienta \"comprobar_fecha y hora\" para validar la fecha ingresada, si la fecha y hora es válida entonces puedes continuar con la comprobación de disponibilidad utilizando la herramiento \"comprobar_disponibilidad\". Sólo cuando se cumplen las condiciones de la fecha y hora está validada y se verifica la disponibilidad (no hay otra cita en la fecha y horario solicitado por el usuario), entonces puedes utilizar la herramienta \"crear_cita\". a continuación te detallo cada paso: \n\n  5.1. **Verificación de la fecha ingresada** \n  - Siempre interpreta las fechas en el año en curso con el formato {{$now.toFormat('dd/MM/yyyy HH:mm')}}.\n  - Si el usuario no menciona el año, asume automáticamente que se refiere al año en curso.\n  - Usa la herramienta \"comprobar_fecha y hora\" para validar la fecha ingresada.\n  - Si la fecha no es válida, informa al usuario y pídele que ingrese otra fecha.\n\n  5.2. **Comprobación de disponibilidad**\n  - **Sólo si la fecha es válida**, usa la herramienta \"comprobar_disponibilidad\".\n  - Si hay disponibilidad, responde:\n    - \"Hay un cupo disponible a la {hora solicitada}, ¿Desea reservar?\"\n  - Si el usuario confirma, crea la cita con la herramienta \"crear_cita\".\n  - Si no hay disponibilidad, ofrece horarios alternativos.\n\n6. **Consulta de horarios antes de reservar**\n  - Si el usuario pregunta por horarios disponibles en un día específico:\n    - Usa \"comprobar_fecha y hora\" para validar la fecha.\n    - Si es válida, usa \"entregar_horarios\" para mostrar las opciones.\n    - Si no hay horarios disponibles, pregunta si quiere ver disponibilidad para otro día.\n\n7. **Modificación de citas**\n  - Pregunta por la fecha actual de la cita y la nueva fecha.\n  - Usa \"modificar_cita\" proporcionando el número de teléfono, la fecha y la nueva fecha.\n\n8. **Eliminar citas**\n  - Pregunta la fecha actual de la cita que quiere eliminar.\n  - usa la herramienta \"eliminar_cita\", proporcionando el número de teléfono ({{ $('Edit Fields').item.json.numero_telefono }}) y la fecha actual de la cita.\n\n# IMPORTANTE\n- No incluyas mensajes internos o reflexiones. Responde directamente al usuario.\n- La fecha actual es: {{$now.toFormat('dd/MM/yyyy HH:mm')}}\n\n- Las respuestas deben ser claras, ordenadas y orientadas a la acción inmediata.\n- No utilices asteriscos ni ningún formato de texto (como negritas o cursivas) en las respuestas. El texto debe presentarse de forma simple, sin símbolos especiales.\n- **No repitas el mensaje de bienvenida en cada respuesta posterior.**\n- No envíes el enlace de la cita.\n- Recuerda que para modificar citas debes utilizar la herramienta \"modifica_cita\".\n- Cuando el usuario solicite crear una cita o reunión, utiliza la herramienta \"comprobar_fecha y hora\" y luego continúa con el paso 6.\n- El formato de entrada de la fecha puede variar, te voy a dar varios ejemplos de distintos formatos que puedes recibir para hacer referencia a un mismo día:\n  - 19/06\n  - 19-06\n  - 19 de junio\n  - El próximo sábado\n\n# Detalles específicos:\n  - Días y rangos de horarios en los que se puede agendar citas o reuniones:\n    - Lunes a viernes:\n      - Abierto de 18hs a 21hs\n    - Sábados y domingos:\n      - Abierto de 8hs a 20hs\n\n  - Con este horario puedes agendar citas los sábados y domingos en los siguientes horarios:\n\n  - 08hs\n  - 09hs\n  - 10hs\n  - 11hs\n  - 12hs\n  - 13hs\n  - 14hs\n  - 15hs\n  - 16hs\n  - 17hs\n  - 18hs\n  - 19hs\n  - 20hs\n\n - Con este horario puedes agendar citas los días lunes, martes, miércoles, jueves y viernes en los siguientes horarios:\n\n  - 18hs\n  - 19hs\n  - 20hs\n  - 21hs\n\n- Recuerda que el horario en que se pueden agendar citas los sábados y domingos es desde las 8:00hs hasta las 20:00hs.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1120,
+        520
+      ],
+      "id": "6690d0ab-28f2-41aa-a400-11c1b1390c96",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXI12lWmW7TsHIm",
+          "mode": "list",
+          "cachedResultName": "CRM NEXO soluciones IA",
+          "cachedResultUrl": "https://airtable.com/appXI12lWmW7TsHIm"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblCelDOJOP9EqQ1R",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://airtable.com/appXI12lWmW7TsHIm/tblCelDOJOP9EqQ1R"
+        },
+        "filterByFormula": "={Telefono}='{{ $('Recepción de mensajes').item.json.body.data.key.remoteJid }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        1080
+      ],
+      "id": "514b654a-0d7b-4c44-825c-866e15bd4275",
+      "name": "comprobar_nombre",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "gDxDpPYs68oKLCpz",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appXI12lWmW7TsHIm",
+          "mode": "list",
+          "cachedResultName": "CRM NEXO soluciones IA",
+          "cachedResultUrl": "https://airtable.com/appXI12lWmW7TsHIm"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblCelDOJOP9EqQ1R",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://airtable.com/appXI12lWmW7TsHIm/tblCelDOJOP9EqQ1R"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "={{ $('Edit Fields').item.json.body.data.pushName }}",
+            "Telefono": "={{ $('Recepción de mensajes').item.json.body.data.key.remoteJid }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        1360,
+        1080
+      ],
+      "id": "5680799c-ad0e-42df-a840-9e45aa17e606",
+      "name": "crear_nuevo_usuario",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "gDxDpPYs68oKLCpz",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "modificar_cita",
+        "description": "Eres la herramienta encargada de modificar la cita de los usuarios.",
+        "workflowId": {
+          "__rl": true,
+          "value": "9eLf5NQ9jofBF1hK",
+          "mode": "list",
+          "cachedResultName": "modificar_cita"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        1080
+      ],
+      "id": "cf8d4f39-299b-443e-87e1-cacdfb5d4b96",
+      "name": "modificar_cita"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d6f0090-e244-4c3e-b114-afea3d94a902",
+              "name": "numero_telefono",
+              "value": "={{ $('Recepción de mensajes').item.json.body.data.key.remoteJid }}",
+              "type": "string"
+            },
+            {
+              "id": "2008e86e-4f8a-4c93-8613-4b2b73870e66",
+              "name": "mensaje_usuario",
+              "value": "={{ $('Recepción de mensajes').item.json.body.data.message.conversation }}",
+              "type": "string"
+            },
+            {
+              "id": "f78465f0-1b4b-4d46-b293-8fd1e531ddde",
+              "name": "body.data.key.id",
+              "value": "={{ $('Recepción de mensajes').item.json.body.data.key.id }}",
+              "type": "string"
+            },
+            {
+              "id": "34fe830b-fe0d-41ab-a1f2-d57921ce921e",
+              "name": "body.data.instanceId",
+              "value": "={{ $('Recepción de mensajes').item.json.body.data.instanceId }}",
+              "type": "string"
+            },
+            {
+              "id": "1736b3d5-d05b-41ce-8522-714c4fdea5b7",
+              "name": "body.destination",
+              "value": "={{ $('Recepción de mensajes').item.json.body.destination }}",
+              "type": "string"
+            },
+            {
+              "id": "0c927fc8-7232-4757-8664-27ba5814f77a",
+              "name": "body.data.pushName",
+              "value": "={{ $('Recepción de mensajes').item.json.body.data.pushName }}",
+              "type": "string"
+            },
+            {
+              "id": "a6102c19-cbf7-4057-9444-8d23d6b4cebb",
+              "name": "body.date_time",
+              "value": "={{ $('Recepción de mensajes').item.json.body.date_time }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        500,
+        560
+      ],
+      "id": "655a0323-6e67-44ad-95fe-ab3754d25213",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "id": "5e1f2a05-13cb-44a3-a9fb-8c81046170eb",
+      "name": "Transcribir",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.6,
+      "position": [
+        280,
+        460
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "oBjWDG9tyqbWSTA1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "evolutionApi",
+        "options": {}
+      },
+      "id": "78f160f8-5d3b-4464-aafa-9b09d295bf21",
+      "name": "Descargar audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        60,
+        460
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "evolutionApi": {
+          "id": "mZwrv4xObHrnHKeC",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "eliminar_cita",
+        "description": "Herramienta encargada de eliminar la cita del usuario. ",
+        "workflowId": {
+          "__rl": true,
+          "value": "FpCZSvZ9ezsRc7Hz",
+          "mode": "list",
+          "cachedResultName": "eliminar_cita"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        880,
+        820
+      ],
+      "id": "41d436b9-4e68-4e5a-ad45-002cc42fa13b",
+      "name": "eliminar_cita"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.messages[0].audio }}",
+                    "rightValue": "audio",
+                    "id": "ad5947c6-9079-46e2-810f-aeca9c41f675"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio Message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2d2e61c5-5d20-4c43-99ec-dcbe7476b534",
+                    "leftValue": "={{ $json.body.data.message }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text Message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c47da6ad-e214-4142-9861-a83edb6585b3",
+                    "leftValue": "={{ $json.messages[0].button }}",
+                    "rightValue": "={{ $json.messages[0].button.payload }}",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Mensaje boton"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "15b619f9-8a42-4c3c-ae43-b89a1237bb99",
+      "name": "Enrutador de tipos de mensajes",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -380,
+        660
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa3850aa-e35c-4201-b6b5-7ea4e79f7da9",
+              "name": "text",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        660
+      ],
+      "id": "fbdceb1b-9d01-4b6e-971a-5b7b0446545b",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Recepción de mensajes').item.json.body.data.key.remoteJid }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1060,
+        1080
+      ],
+      "id": "ed710c66-9576-4c04-bba1-90b2e983b185",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "9hjKdSzlmshl0OVM",
+          "name": "Postgres Recepcionista NEXO"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        1080
+      ],
+      "id": "676da393-9503-4b33-b8d6-18f5a8fbbd87",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "oBjWDG9tyqbWSTA1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $now }}",
+        "format": "custom",
+        "customFormat": "dd/MM/yyyy HH:mm",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        720,
+        560
+      ],
+      "id": "d887ccab-b09d-463a-af1a-6f14f53c98a1",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "name": "comprobar_fecha_y_hora",
+        "description": "Herramienta encargada de ver la disponibilidad para un dia y horario en especifico, recibe como entrada la fecha y hora que indica el usuario.",
+        "workflowId": {
+          "__rl": true,
+          "value": "0nJwtATx0MVETNLT",
+          "mode": "list",
+          "cachedResultName": "comprobar_fecha y hora"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [
+            "Fecha y hora"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.1,
+      "position": [
+        1220,
+        820
+      ],
+      "id": "9a8e59bb-2e88-4354-abab-f7744c490ede",
+      "name": "comprobar_fecha y hora"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "nexo.soluciones.ia@gmail.com",
+          "mode": "list",
+          "cachedResultName": "nexo.soluciones.ia@gmail.com"
+        },
+        "start": "={{$fromAI(\"After\",\"fecha y hora actual de la cita\")}}",
+        "end": "={{$fromAI(\"Before\",\"30 minutos después de la fecha y hora actual de la cita\")}}",
+        "additionalFields": {
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', `Coloca el Nombre del usuario y número de teléfono`, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1560,
+        820
+      ],
+      "id": "d1b5bdf4-538d-41c5-a648-c3e216ac5cdc",
+      "name": "crear_cita",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TH2z7gsGMseRMP5k",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "comprobar_disponibilidad",
+        "description": "Eres la herramienta encargada de comprobar la disponibilidad de horarios",
+        "workflowId": {
+          "__rl": true,
+          "value": "57aXyKepV5z2JVn7",
+          "mode": "list",
+          "cachedResultName": "comprobar_disponibilidad"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.1,
+      "position": [
+        1060,
+        820
+      ],
+      "id": "7fab3fbd-3ebe-4b33-83f4-552b21bf6496",
+      "name": "comprobar_disponibilidad"
+    },
+    {
+      "parameters": {
+        "description": "Eres una herramienta profesional para la gestión de agenda de reuniones. Tu función es entregar los horarios disponibles",
+        "workflowId": {
+          "__rl": true,
+          "value": "zExEanmCuPGfzMVD",
+          "mode": "list",
+          "cachedResultName": "entregar_horarios"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        820
+      ],
+      "id": "abf786a5-9838-4427-a3c6-31fd0250e3f1",
+      "name": "entregar_horarios"
+    },
+    {
+      "parameters": {
+        "content": "RECEPCIÓN DE MENSAJES",
+        "height": 240,
+        "width": 300
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -740,
+        560
+      ],
+      "id": "e0c3f7b5-bde8-4019-a0a3-079466ab81b4",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "PROCESAMIENTO DE MENSAJES",
+        "height": 460,
+        "width": 660,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        400
+      ],
+      "id": "14999845-8126-4fca-ade9-7c2afb0e93ec",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "AGENTE DE INTELIGENCIA ARTIFICIAL CON MEMORIA Y HERRAMIENTAS INTEGRADAS",
+        "height": 840,
+        "width": 800,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        860,
+        380
+      ],
+      "id": "7d80052f-892f-48c5-9ea4-48b5a42ee56b",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "RESPUESTA DE MENSAJES",
+        "height": 460,
+        "width": 660,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1660,
+        380
+      ],
+      "id": "22f14f4c-b3f0-4109-9de1-351fd2f2bffc",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Recepción de mensajes": {
+      "main": [
+        [
+          {
+            "node": "Enrutador de tipos de mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Captación de audio": {
+      "main": [
+        [
+          {
+            "node": "Descargar audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer mensaje": {
+      "main": [
+        [
+          {
+            "node": "Mensaje de respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje de respuesta": {
+      "main": [
+        [
+          {
+            "node": "Cierre de  conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cierre de  conversación": {
+      "main": [
+        []
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Leer mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comprobar_nombre": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear_nuevo_usuario": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "modificar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribir": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar audio": {
+      "main": [
+        [
+          {
+            "node": "Transcribir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eliminar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrutador de tipos de mensajes": {
+      "main": [
+        [
+          {
+            "node": "Captación de audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comprobar_fecha y hora": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comprobar_disponibilidad": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "entregar_horarios": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "b78af70a-153d-4cca-b364-30536be04aa1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "28c0bd6452ce3e0c9cb8ba22ee14545648253371921485e01c6d57886933a038"
+  },
+  "id": "6NBaklZutNchta6f",
+  "tags": [
+    {
+      "createdAt": "2025-06-14T10:25:52.165Z",
+      "updatedAt": "2025-06-14T10:25:52.165Z",
+      "id": "GmS1N5PdqMBD2VwR",
+      "name": "Agente recepcionista"
+    }
+  ]
+}

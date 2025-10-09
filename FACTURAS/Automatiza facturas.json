@@ -1,0 +1,478 @@
+{
+  "name": "facturas_ejemplo",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1jrYONROjv4Zk-c4lI6j7ob6vPuE_y8NH",
+          "mode": "list",
+          "cachedResultName": "test_facturas_extractor",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1jrYONROjv4Zk-c4lI6j7ob6vPuE_y8NH"
+        },
+        "event": "fileCreated",
+        "options": {
+          "fileType": "all"
+        }
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        520,
+        -40
+      ],
+      "id": "0cece0e7-9897-4099-886b-4efb04cef1e0",
+      "name": "subir_archivo",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "fIubscERu0f00JLQ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{$json.id}}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        980,
+        -20
+      ],
+      "id": "9247af07-7e0c-4c2d-b24c-8932abdc9654",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "fIubscERu0f00JLQ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "destinationKey": "base64",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -20
+      ],
+      "id": "2bf80aec-c897-4b3c-b417-01fa61f5bbfb",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "xxxx"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [\n        {\n          \"inlineData\": {\n            \"mimeType\": \"{{ $('subir_archivo').item.json.mimeType }}\",\n            \"data\": \"{{ $('Extract from File').item.json.base64 }}\"\n          }\n        },\n        {\n          \"text\": \"Mi empresa es Lambda, que es el receptor de la factura.\\n\\nA partir del documento de factura proporcionado, extrae los siguientes campos y devuelve un objeto JSON con los campos en el orden exacto listado a continuación:\\n\\n⸻\\n\\n• Fecha de la Factura: La fecha en que se emitió la factura. Formato estrictamente así: DD/MM/AAAA (p. ej. 15/11/2025).\\n• Categoría: Clasifica el gasto en una de las siguientes categorías predefinidas:\\n    • Costes de IT y Software\\n    • Telefonía y Comunicaciones\\n    • Material de Oficina\\n    • Viajes y Alojamiento\\n    • Marketing y Publicidad\\n    • Honorarios por Servicios\\n    • Suscripciones y Membresías\\n    • Formación y Educación\\n    • Suministros y Alquileres\\n    • Servicios Profesionales\\n• Emisor: El nombre de la empresa o persona que emitió la factura. Esto no es Lambda, sino la entidad que figura claramente en la factura como emisor.\\n• Descripción: Breve explicación del producto o servicio prestado.\\n• Importe (sin IVA): El precio neto antes de IVA.\\n    • Elimina cualquier símbolo o texto de moneda (€, $, EUR, USD, etc.).\\n    • Usa coma como separador decimal, no punto (p. ej. 10.90 → 10,90).\\n    • Ejemplo: \\\"1200,00\\\"\\n• IVA %: El valor numérico del tipo de IVA, usando coma como separador decimal y sin el símbolo de porcentaje.\\n    • Ejemplo: \\\"21,0\\\" (no \\\"21.0\\\" ni \\\"21,0%\\\")\\n    • Si no se aplica IVA, escribe \\\"0,0\\\"\\n• Total: El importe total incluido el IVA.\\n    • Elimina cualquier símbolo de moneda.\\n    • Formato con coma como separador decimal.\\n    • Ejemplo: \\\"1500,00\\\"\\n• Moneda: Extrae la unidad monetaria de forma separada como una abreviatura en mayúsculas (p. ej. \\\"EUR\\\", \\\"USD\\\").\\n• Notas: Cualquier anotación relevante para contabilidad o aclaraciones. Si no aplica, usa \\\"N/A\\\".\\n\\n⸻\\n\\n✅ Asegúrate de:\\n• Formato consistente en todos los campos.\\n• Ningún campo vacío (usa \\\"N/A\\\" donde no haya datos).\\n• Cumplimiento estricto del orden y estructura indicados.\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0,\n    \"topK\": 1,\n    \"topP\": 0.95,\n    \"maxOutputTokens\": 1024,\n    \"responseMimeType\": \"application/json\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        -20
+      ],
+      "id": "10171e14-1135-4e5a-8dc2-0965e4d8fff0",
+      "name": "Gemini"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fe29fadf-1d53-4be3-885f-4f03967fd23b",
+              "name": "JsonString",
+              "value": "={{JSON.parse($json.candidates[0].content.parts[0].text)}}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        -20
+      ],
+      "id": "883a319b-33db-4321-82e0-aa89bc3db752",
+      "name": "String to Json"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mao2cdMZC6FIW4_dMOMVBqTdvE6fWYooy1h911h64pQ",
+          "mode": "list",
+          "cachedResultName": "facturas_buenas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mao2cdMZC6FIW4_dMOMVBqTdvE6fWYooy1h911h64pQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mao2cdMZC6FIW4_dMOMVBqTdvE6fWYooy1h911h64pQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $json.JsonString[0]['Fecha de la Factura'] }}",
+            "Categoría": "={{ $json.JsonString[0]['Categoría'] }}",
+            "Emisor": "={{ $json.JsonString[0].Emisor }}",
+            "Descripción": "={{ $json.JsonString[0]['Descripción'] }}",
+            "Importe": "={{ $json.JsonString[0]['Importe (sin IVA)'] }}",
+            "Iva": "={{ $json.JsonString[0]['IVA %'] }}",
+            "Total": "={{ $json.JsonString[0].Total }}",
+            "Moneda": "={{ $json.JsonString[0].Moneda }}",
+            "URL": "={{ $('Download file').item.json.webViewLink }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Categoría",
+              "displayName": "Categoría",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Emisor",
+              "displayName": "Emisor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Descripción",
+              "displayName": "Descripción",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Importe",
+              "displayName": "Importe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Iva",
+              "displayName": "Iva",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Moneda",
+              "displayName": "Moneda",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1900,
+        -20
+      ],
+      "id": "c2150006-a74b-4201-9bd6-6c52a9fd96cd",
+      "name": "facturas autonomo",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ymcawzVynBzgbRx2",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        -20
+      ],
+      "id": "635c0017-fcc2-4dae-9b3c-912ca8146f42",
+      "name": "Espera peticiones",
+      "webhookId": "d9c38e93-5ffa-4476-b673-c6cace25fb77"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        740,
+        -40
+      ],
+      "id": "e9faf774-5834-4371-a200-69bdd11935cc",
+      "name": "Bucle"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        500,
+        240
+      ],
+      "id": "9621f3a6-c086-418c-a14d-02d7f36d14dc",
+      "name": "Telegram Trigger",
+      "webhookId": "44e2a84e-a87d-4bed-86ea-67d6fe6b11d0",
+      "credentials": {
+        "telegramApi": {
+          "id": "6LlCDPOnxOnFQPJW",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $now.format('yyyy-MM-dd') }}-{{ $json.message.photo[0].file_unique_id }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1jrYONROjv4Zk-c4lI6j7ob6vPuE_y8NH",
+          "mode": "list",
+          "cachedResultName": "test_facturas_extractor",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1jrYONROjv4Zk-c4lI6j7ob6vPuE_y8NH"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        720,
+        240
+      ],
+      "id": "be65e0cf-5960-4dc8-9de0-c671ff4ae9d2",
+      "name": "guardar_drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "fIubscERu0f00JLQ",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "subir_archivo": {
+      "main": [
+        [
+          {
+            "node": "Bucle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini": {
+      "main": [
+        [
+          {
+            "node": "String to Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "String to Json": {
+      "main": [
+        [
+          {
+            "node": "facturas autonomo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "facturas autonomo": {
+      "main": [
+        [
+          {
+            "node": "Espera peticiones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Espera peticiones": {
+      "main": [
+        [
+          {
+            "node": "Bucle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bucle": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "guardar_drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "23cdc4cb-9a0f-4541-9acc-1022c7d75cee",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dba9844ea0944d958a071c154eaf52f0d451d647c14f2fdb78389cb1a8f69b93"
+  },
+  "id": "nf7VsoZFU6sprnto",
+  "tags": []
+}
