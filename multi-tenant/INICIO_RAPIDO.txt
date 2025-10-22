@@ -1,0 +1,218 @@
+═══════════════════════════════════════════════════════════════
+  NEXO IA - INICIO RÁPIDO EN HOSTINGER (SIN DOMINIO)
+═══════════════════════════════════════════════════════════════
+
+📋 PREPARACIÓN (en tu PC Windows):
+═══════════════════════════════════════════════════════════════
+
+1. Anotar la IP de tu VPS Hostinger
+   Ejemplo: 123.456.789.123
+
+2. Conectarte por SSH:
+   ssh root@123.456.789.123
+
+3. Instalar Git (si no lo tienes):
+   apt install git -y
+
+
+🚀 INSTALACIÓN AUTOMÁTICA (3 comandos):
+═══════════════════════════════════════════════════════════════
+
+# 1. Clonar repositorio
+cd /opt
+git clone https://github.com/tu-usuario/AI-assistant.git
+cd AI-assistant/multi-tenant
+
+# 2. Dar permisos y ejecutar instalador
+chmod +x install_hostinger.sh
+./install_hostinger.sh
+
+# 3. ¡Listo! El script hace todo automáticamente
+
+
+✅ DESPUÉS DE LA INSTALACIÓN:
+═══════════════════════════════════════════════════════════════
+
+El script te mostrará:
+  - URL del panel: http://TU_IP:3000
+  - Usuario: admin
+  - Contraseña: [generada automáticamente]
+
+⚠️ IMPORTANTE: Guarda esas credenciales!
+
+
+🎯 CREAR TU PRIMERA INSTANCIA:
+═══════════════════════════════════════════════════════════════
+
+# Pack Estándar
+./scripts/provision_nossl.sh cliente1 estandar
+
+# Pack Premium
+./scripts/provision_nossl.sh cliente2 premium
+
+# Pack NEXA
+./scripts/provision_nossl.sh cliente3 nexa
+
+
+El script te devolverá:
+  URL: http://TU_IP:5678
+  Usuario: admin
+  Contraseña: [generada]
+
+
+🌐 ACCEDER A LA INSTANCIA:
+═══════════════════════════════════════════════════════════════
+
+1. Abrir navegador
+2. Ir a: http://TU_IP:5678
+3. Login con las credenciales que te dio el script
+4. Verás n8n con workflows ya importados
+5. Configurar APIs en Settings → Credentials
+6. Activar workflows
+
+
+📦 PACKS Y PRECIOS:
+═══════════════════════════════════════════════════════════════
+
+🟢 ESTÁNDAR ($99/mes)
+   - WhatsApp Bot
+   - Gmail Bot  
+   - Captación Leads
+   URL: http://TU_IP:5678
+
+🟡 PREMIUM ($199/mes)
+   - Todo el Estándar
+   - Voice WhatsApp
+   - Email Icebreaker
+   - Facturas Automáticas
+   URL: http://TU_IP:5679
+
+🔵 NEXA ($399/mes)
+   - Todo el Premium
+   - Personal Assistant CEO
+   - Videos VEO 3
+   - Analytics IA
+   URL: http://TU_IP:5680
+
+
+🔧 COMANDOS ÚTILES:
+═══════════════════════════════════════════════════════════════
+
+# Ver todas las instancias
+docker ps | grep n8n_
+
+# Ver logs del panel
+docker logs -f nexo_control_panel
+
+# Ver logs de una instancia
+cd /opt/AI-assistant/multi-tenant/instances/cliente1
+./manage.sh logs
+
+# Reiniciar instancia
+./manage.sh restart
+
+# Backup de instancia
+./manage.sh backup
+
+# Ver estado del sistema
+docker-compose -f docker-compose-nossl.yml ps
+
+
+🚨 TROUBLESHOOTING:
+═══════════════════════════════════════════════════════════════
+
+❌ No puedo acceder a http://TU_IP:3000
+   → Verificar firewall: ufw status
+   → Abrir puerto: ufw allow 3000/tcp
+   → Reiniciar: docker-compose -f docker-compose-nossl.yml restart
+
+❌ Panel muestra error
+   → Ver logs: docker logs nexo_control_panel
+   → Reiniciar: docker restart nexo_control_panel
+
+❌ n8n no carga
+   → Ver logs: cd instances/cliente1 && ./manage.sh logs
+   → Reiniciar: ./manage.sh restart
+
+❌ Puerto en uso
+   → Ver qué lo usa: lsof -i :5678
+   → Matar proceso: kill -9 [PID]
+
+
+📚 DOCUMENTACIÓN COMPLETA:
+═══════════════════════════════════════════════════════════════
+
+Lee el archivo completo:
+cat INSTALL_HOSTINGER_NOSSL.md
+
+
+💡 FLUJO PARA NUEVOS CLIENTES:
+═══════════════════════════════════════════════════════════════
+
+1. Cliente te contrata Pack Premium
+
+2. Tú ejecutas:
+   ./scripts/provision_nossl.sh nombre_cliente premium
+
+3. El script genera:
+   URL: http://TU_IP:5679
+   Usuario: admin
+   Contraseña: ABC123xyz
+
+4. Le envías al cliente:
+   - La URL
+   - Usuario y contraseña
+   - Lista de APIs que debe configurar
+
+5. Cliente entra a n8n:
+   - Configura sus APIs (OpenAI, Evolution, etc.)
+   - Activa los workflows
+   - ¡Empieza a usar!
+
+6. Le cobras $199/mes
+
+
+💰 MODELO DE NEGOCIO:
+═══════════════════════════════════════════════════════════════
+
+VPS Hostinger: $30/mes (hasta 10-15 clientes)
+
+Vendes:
+- 5 clientes Pack Estándar: 5 × $99 = $495
+- 3 clientes Pack Premium: 3 × $199 = $597
+- 1 cliente Pack NEXA: 1 × $399 = $399
+
+Total ingresos: $1,491/mes
+Costo VPS: -$30/mes
+Ganancia: $1,461/mes
+
+
+✅ CHECKLIST DE INSTALACIÓN:
+═══════════════════════════════════════════════════════════════
+
+□ VPS conectado por SSH
+□ Git instalado
+□ Repositorio clonado
+□ Script install_hostinger.sh ejecutado
+□ Servicios corriendo (docker ps)
+□ Panel accesible en http://TU_IP:3000
+□ Credenciales guardadas
+□ Puertos abiertos en firewall
+□ Primera instancia creada
+□ n8n accesible en http://TU_IP:5678
+
+
+🎉 ¡SISTEMA LISTO!
+═══════════════════════════════════════════════════════════════
+
+Ya puedes:
+✅ Crear instancias ilimitadas
+✅ Cada cliente totalmente aislado
+✅ Workflows pre-configurados
+✅ Gestión centralizada
+✅ ¡Empezar a vender! 🚀
+
+
+═══════════════════════════════════════════════════════════════
+Para soporte, lee: INSTALL_HOSTINGER_NOSSL.md
+═══════════════════════════════════════════════════════════════
