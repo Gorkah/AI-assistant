@@ -1,0 +1,74 @@
+version: '3.8'
+
+# ================================================
+# NEXO IA - Multi-Tenant SIN SSL (solo IP)
+# Para uso sin dominio - HTTP en puerto 5678
+# ================================================
+
+networks:
+  nexo_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+services:
+  # ================================================
+  # POSTGRESQL - Base de datos compartida
+  # ================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: nexo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - nexo_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================================
+  # REDIS - Cache compartido
+  # ================================================
+  redis:
+    image: redis:7-alpine
+    container_name: nexo_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    networks:
+      - nexo_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================================
+  # NGINX - Proxy simple (sin SSL)
+  # ================================================
+  nginx:
+    image: nginx:alpine
+    container_name: nexo_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-nossl.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - nexo_network
+    depends_on:
+      - postgres
+      - redis
+
+# NOTA: Las instancias de n8n se crearán con:
+# docker run -p PUERTO:5678 n8n
+# Cada cliente tendrá su puerto: 5678, 5679, 5680, etc.
