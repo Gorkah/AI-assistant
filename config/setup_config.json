@@ -1,0 +1,279 @@
+{
+  "project_name": "NEXO Soluciones IA - Sistema de Agentes",
+  "version": "1.0.0",
+  "packages": {
+    "standard": {
+      "name": "Pack Estándar - Automatiza tu Base",
+      "active": true,
+      "workflows": [
+        "Recepcionista/Agente_recepcionista_NEXO.json",
+        "Recepcionista/Agente_Atencion_Gmail.json",
+        "LEADS/Captacion_Leads_Formulario.json"
+      ],
+      "required_apis": [
+        "openai",
+        "gmail",
+        "google_sheets",
+        "evolution_api",
+        "airtable"
+      ]
+    },
+    "premium": {
+      "name": "Pack Premium - Automatiza y Escala",
+      "active": true,
+      "includes_standard": true,
+      "additional_workflows": [
+        "Recepcionista/Agente_Voice_WhatsApp.json",
+        "ICEBREAKER/Email_Icebreaker_Personalizado.json",
+        "FACTURAS/Automatiza facturas.json"
+      ],
+      "additional_apis": [
+        "whisper_api",
+        "tts_api",
+        "google_drive",
+        "gemini_api"
+      ]
+    },
+    "nexa": {
+      "name": "Pack NEXA - Automatización Total",
+      "active": true,
+      "includes_premium": true,
+      "additional_workflows": [
+        "PERSONAL ASSISTANT/Telegram_asistant.json",
+        "PERSONAL ASSISTANT/Personal_Assistant_whatsapp.json",
+        "VIDEOS VEO 3/VEO_3_VIDEOS.json",
+        "ANALYTICS/Agente_Analisis_Empresarial.json"
+      ],
+      "additional_apis": [
+        "telegram_bot",
+        "google_calendar",
+        "google_analytics",
+        "veo3_api"
+      ]
+    }
+  },
+  "api_credentials": {
+    "openai": {
+      "name": "OpenAI API",
+      "required": true,
+      "models": ["gpt-4o", "gpt-4o-mini", "whisper-1", "tts-1"],
+      "env_var": "OPENAI_API_KEY",
+      "test_endpoint": "https://api.openai.com/v1/models"
+    },
+    "gmail": {
+      "name": "Gmail API",
+      "required": true,
+      "scopes": [
+        "https://www.googleapis.com/auth/gmail.send",
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.modify"
+      ],
+      "oauth": true
+    },
+    "google_sheets": {
+      "name": "Google Sheets API",
+      "required": true,
+      "scopes": [
+        "https://www.googleapis.com/auth/spreadsheets"
+      ],
+      "oauth": true
+    },
+    "evolution_api": {
+      "name": "Evolution API (WhatsApp)",
+      "required": true,
+      "base_url": "https://your-evolution-instance.com",
+      "env_vars": {
+        "url": "EVOLUTION_API_URL",
+        "api_key": "EVOLUTION_API_KEY"
+      }
+    },
+    "airtable": {
+      "name": "Airtable",
+      "required": true,
+      "env_var": "AIRTABLE_PAT",
+      "test_endpoint": "https://api.airtable.com/v0/meta/bases"
+    },
+    "telegram_bot": {
+      "name": "Telegram Bot",
+      "required": false,
+      "package": "nexa",
+      "env_var": "TELEGRAM_BOT_TOKEN"
+    }
+  },
+  "airtable_schema": {
+    "bases": [
+      {
+        "name": "CRM NEXO soluciones IA",
+        "tables": [
+          {
+            "name": "Leads",
+            "fields": [
+              {"name": "Nombre", "type": "singleLineText"},
+              {"name": "Apellido", "type": "singleLineText"},
+              {"name": "Email", "type": "email"},
+              {"name": "Telefono", "type": "phoneNumber"},
+              {"name": "Empresa", "type": "singleLineText"},
+              {"name": "Estado", "type": "singleSelect", "options": ["Nuevo", "Contactado", "Calificado", "Convertido", "Perdido"]},
+              {"name": "Score", "type": "number"},
+              {"name": "Clasificacion", "type": "singleSelect", "options": ["Caliente", "Tibio", "Frío"]},
+              {"name": "FechaCreacion", "type": "dateTime"}
+            ]
+          },
+          {
+            "name": "Customers",
+            "fields": [
+              {"name": "Nombre", "type": "singleLineText"},
+              {"name": "Email", "type": "email"},
+              {"name": "Telefono", "type": "phoneNumber"},
+              {"name": "Empresa", "type": "singleLineText"},
+              {"name": "Plan", "type": "singleSelect", "options": ["Estándar", "Premium", "NEXA"]},
+              {"name": "FechaAlta", "type": "date"}
+            ]
+          },
+          {
+            "name": "EmailLog",
+            "fields": [
+              {"name": "EmailID", "type": "singleLineText"},
+              {"name": "De", "type": "email"},
+              {"name": "Asunto", "type": "singleLineText"},
+              {"name": "Fecha", "type": "dateTime"},
+              {"name": "TipoRespuesta", "type": "singleSelect", "options": ["Automática", "Escalación"]},
+              {"name": "Estado", "type": "singleSelect", "options": ["Procesado", "Pendiente", "Error"]}
+            ]
+          },
+          {
+            "name": "VoiceInteractions",
+            "fields": [
+              {"name": "Phone", "type": "phoneNumber"},
+              {"name": "TranscribedText", "type": "multilineText"},
+              {"name": "AIResponse", "type": "multilineText"},
+              {"name": "Timestamp", "type": "dateTime"},
+              {"name": "Duration", "type": "singleLineText"}
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Campaign Log",
+        "tables": [
+          {
+            "name": "EmailsSent",
+            "fields": [
+              {"name": "ProspectoID", "type": "singleLineText"},
+              {"name": "Empresa", "type": "singleLineText"},
+              {"name": "Contacto", "type": "singleLineText"},
+              {"name": "Email", "type": "email"},
+              {"name": "Asunto", "type": "singleLineText"},
+              {"name": "FechaEnvio", "type": "dateTime"},
+              {"name": "Campaña", "type": "singleLineText"},
+              {"name": "Estado", "type": "singleSelect", "options": ["Enviado", "Abierto", "Respondido", "Rebotado"]}
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "google_sheets_templates": {
+    "leads_sheet": {
+      "name": "NEXO_Leads_Database",
+      "sheets": [
+        {
+          "name": "Leads",
+          "headers": [
+            "Fecha", "Nombre", "Apellido", "Email", "Telefono", 
+            "Empresa", "Interes", "Mensaje", "Fuente", "Score", 
+            "Clasificacion", "Estado", "Asignado a", "Notas"
+          ]
+        },
+        {
+          "name": "Estadisticas",
+          "headers": [
+            "Fecha", "Total Leads", "Calientes", "Tibios", "Frios",
+            "Tasa Conversion", "Fuente Principal"
+          ]
+        }
+      ]
+    },
+    "facturas_sheet": {
+      "name": "NEXO_Facturas_Control",
+      "sheets": [
+        {
+          "name": "Facturas",
+          "headers": [
+            "Fecha", "Numero", "Proveedor", "Concepto", "Base", 
+            "IVA", "Total", "Estado", "Categoria", "Archivo"
+          ]
+        },
+        {
+          "name": "Resumen",
+          "headers": [
+            "Mes", "Total Gastos", "Por Categoria", "Pendientes Pago"
+          ]
+        }
+      ]
+    }
+  },
+  "webhooks": {
+    "base_url": "https://your-n8n-instance.com/webhook",
+    "endpoints": [
+      {
+        "name": "lead_capture",
+        "path": "/lead-capture-form",
+        "method": "POST",
+        "workflow": "Captacion_Leads_Formulario"
+      },
+      {
+        "name": "whatsapp_reception",
+        "path": "/424a3080-4473-47fb-8b32-6fdeede8f02b",
+        "method": "POST",
+        "workflow": "Agente_recepcionista_NEXO"
+      },
+      {
+        "name": "voice_messages",
+        "path": "/voice-webhook",
+        "method": "POST",
+        "workflow": "Agente_Voice_WhatsApp"
+      }
+    ]
+  },
+  "environment_variables": {
+    "production": {
+      "N8N_HOST": "https://n8n.nexosoluciones.com",
+      "N8N_PORT": "5678",
+      "N8N_PROTOCOL": "https",
+      "WEBHOOK_URL": "https://n8n.nexosoluciones.com/webhook",
+      "EXECUTIONS_DATA_SAVE_ON_SUCCESS": "all",
+      "EXECUTIONS_DATA_SAVE_ON_ERROR": "all",
+      "EXECUTIONS_DATA_SAVE_ON_PROGRESS": "true"
+    },
+    "development": {
+      "N8N_HOST": "localhost",
+      "N8N_PORT": "5678",
+      "N8N_PROTOCOL": "http",
+      "WEBHOOK_URL": "http://localhost:5678/webhook",
+      "EXECUTIONS_DATA_SAVE_ON_SUCCESS": "all",
+      "EXECUTIONS_DATA_SAVE_ON_ERROR": "all"
+    }
+  },
+  "monitoring": {
+    "alerts": {
+      "email": "soporte@nexosoluciones.com",
+      "telegram_chat_id": "@nexo_alerts",
+      "whatsapp": "+34XXXXXXXXX"
+    },
+    "metrics": [
+      "workflow_executions_total",
+      "workflow_errors_total",
+      "api_calls_per_minute",
+      "lead_conversion_rate",
+      "email_response_time"
+    ]
+  },
+  "backup": {
+    "frequency": "daily",
+    "time": "02:00",
+    "retention_days": 30,
+    "destination": "google_drive",
+    "folder_id": "1ABC_BACKUP_FOLDER_ID"
+  }
+}

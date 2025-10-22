@@ -1,0 +1,428 @@
+{
+  "name": "Agente Atención Cliente - Gmail Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labels": [],
+          "sender": {},
+          "readStatus": "unread",
+          "receivedAfter": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.1,
+      "position": [100, 300],
+      "id": "gmail-trigger",
+      "name": "Gmail Trigger - Nuevos Emails"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "email_id",
+              "name": "email_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "email_from",
+              "name": "email_from",
+              "value": "={{ $json.from.value[0].address }}",
+              "type": "string"
+            },
+            {
+              "id": "email_from_name",
+              "name": "email_from_name",
+              "value": "={{ $json.from.value[0].name }}",
+              "type": "string"
+            },
+            {
+              "id": "email_subject",
+              "name": "email_subject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "email_body",
+              "name": "email_body",
+              "value": "={{ $json.text || $json.textAsHtml }}",
+              "type": "string"
+            },
+            {
+              "id": "email_date",
+              "name": "email_date",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "thread_id",
+              "name": "thread_id",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [300, 300],
+      "id": "extract-email-data",
+      "name": "Extraer Datos Email"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXI12lWmW7TsHIm",
+          "mode": "list",
+          "cachedResultName": "CRM Empresa de Gorka"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblCustomers",
+          "mode": "list",
+          "cachedResultName": "Clientes"
+        },
+        "filterByFormula": "={Email}='{{ $json.email_from }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [500, 400],
+      "id": "check-customer",
+      "name": "Verificar Cliente"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Email de: {{ $json.email_from_name }} <{{ $json.email_from }}>\nAsunto: {{ $json.email_subject }}\n\nMensaje:\n{{ $json.email_body }}\n\n---\nFecha del email: {{ $json.email_date }}\nEs cliente existente: {{ $('Verificar Cliente').item.json.records.length > 0 ? 'Sí' : 'No' }}",
+        "options": {
+          "systemMessage": "# Rol\nEres el asistente virtual de atención al cliente de la Empresa de Gorka, especializada en automatización con IA. Tu función es responder emails de manera profesional, eficiente y personalizada.\n\n# Tarea\nResponde al email del cliente de manera apropiada. Si es una consulta general, proporciona información útil. Si requiere intervención humana (temas técnicos complejos, negociación de precios, problemas críticos), indica educadamente que un especialista se pondrá en contacto pronto.\n\n# Directrices:\n1. Mantén un tono profesional pero cercano\n2. Si el cliente es existente, personaliza la respuesta\n3. Para consultas sobre servicios, menciona los packs disponibles (Estándar, Premium, NEXA)\n4. Si detectas urgencia o problemas críticos, marca para escalación\n5. Siempre firma como 'Equipo de Soporte - Empresa de Gorka'\n\n# Información de la empresa:\n- Horario de atención humana: Lunes a Viernes, 9:00 - 18:00\n- Email de contacto urgente: gorkahv@icloud.com\n- Contacto: Gorka",
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [700, 300],
+      "id": "ai-email-responder",
+      "name": "AI Email Responder"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [700, 450],
+      "id": "openai-model-email",
+      "name": "OpenAI Model"
+    },
+    {
+      "parameters": {
+        "name": "buscar_informacion_servicios",
+        "description": "Busca información detallada sobre los servicios y paquetes de la empresa",
+        "code": "// Información sobre servicios\nconst servicios = {\n  'Pack Estándar': {\n    descripcion: 'Automatización básica con agentes de atención al cliente 24/7 y captación de leads inteligente',\n    precio: 'Consultar',\n    incluye: ['WhatsApp 24/7', 'Gmail automático', 'Captación leads con IA']\n  },\n  'Pack Premium': {\n    descripcion: 'Todo el Pack Estándar más agentes de voz, email icebreaker y organización de facturas',\n    precio: 'Consultar',\n    incluye: ['Todo Pack Estándar', 'Agente Voice', 'Email Icebreaker', 'Facturas automáticas']\n  },\n  'Pack NEXA': {\n    descripcion: 'Automatización total con asistente personal CEO, videos y análisis empresarial',\n    precio: 'Consultar',\n    incluye: ['Todo Pack Premium', 'Personal Assistant', 'Videos VEO 3', 'Analytics IA']\n  }\n};\n\nconst query = $input.first().json.query || '';\nlet respuesta = 'Ofrecemos 3 paquetes:\\n\\n';\n\nfor (const [nombre, info] of Object.entries(servicios)) {\n  respuesta += `**${nombre}**: ${info.descripcion}\\n`;\n  respuesta += `Incluye: ${info.incluye.join(', ')}\\n\\n`;\n}\n\nrespuesta += 'Para más información sobre precios y detalles, contacta con nuestro equipo comercial.';\n\nreturn { response: respuesta };"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [700, 550],
+      "id": "tool-services-info",
+      "name": "Herramienta Info Servicios"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "ESCALACION_REQUERIDA",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "intervención humana",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "especialista",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [900, 300],
+      "id": "check-escalation",
+      "name": "Verificar Escalación"
+    },
+    {
+      "parameters": {
+        "messageId": "={{ $('Extraer Datos Email').item.json.email_id }}",
+        "subject": "=Re: {{ $('Extraer Datos Email').item.json.email_subject }}",
+        "toList": "={{ $('Extraer Datos Email').item.json.email_from }}",
+        "emailType": "html",
+        "message": "={{ $('AI Email Responder').item.json.output.replace(/\\n/g, '<br>') }}",
+        "options": {
+          "replyToSenderOnly": true,
+          "ccList": "",
+          "bccList": "gorkahv@icloud.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 200],
+      "id": "send-ai-response",
+      "name": "Enviar Respuesta AI"
+    },
+    {
+      "parameters": {
+        "subject": "=🚨 ESCALACIÓN REQUERIDA - {{ $('Extraer Datos Email').item.json.email_subject }}",
+        "toList": "gorkahv@icloud.com",
+        "emailType": "html",
+        "message": "=<h2>⚠️ Email que requiere atención humana</h2>\n<hr>\n<h3>Datos del remitente:</h3>\n<ul>\n<li><strong>De:</strong> {{ $('Extraer Datos Email').item.json.email_from_name }} &lt;{{ $('Extraer Datos Email').item.json.email_from }}&gt;</li>\n<li><strong>Asunto:</strong> {{ $('Extraer Datos Email').item.json.email_subject }}</li>\n<li><strong>Fecha:</strong> {{ $('Extraer Datos Email').item.json.email_date }}</li>\n<li><strong>Cliente existente:</strong> {{ $('Verificar Cliente').item.json.records.length > 0 ? 'Sí' : 'No' }}</li>\n</ul>\n<h3>Mensaje original:</h3>\n<div style='border: 1px solid #ddd; padding: 10px; background: #f9f9f9;'>{{ $('Extraer Datos Email').item.json.email_body.replace(/\\n/g, '<br>') }}</div>\n<h3>Respuesta sugerida por IA:</h3>\n<div style='border: 1px solid #ddd; padding: 10px; background: #f0f8ff;'>{{ $('AI Email Responder').item.json.output.replace(/\\n/g, '<br>') }}</div>\n<hr>\n<p><a href='https://mail.google.com/mail/u/0/#inbox/{{ $('Extraer Datos Email').item.json.thread_id }}'>Ver en Gmail</a></p>",
+        "options": {
+          "replyTo": "={{ $('Extraer Datos Email').item.json.email_from }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 400],
+      "id": "notify-escalation",
+      "name": "Notificar Escalación"
+    },
+    {
+      "parameters": {
+        "messageId": "={{ $('Extraer Datos Email').item.json.email_id }}",
+        "subject": "=Re: {{ $('Extraer Datos Email').item.json.email_subject }}",
+        "toList": "={{ $('Extraer Datos Email').item.json.email_from }}",
+        "emailType": "html",
+        "message": "<p>Estimado/a {{ $('Extraer Datos Email').item.json.email_from_name }},</p>\n<p>Gracias por contactar con la Empresa de Gorka.</p>\n<p>Hemos recibido su mensaje y debido a la naturaleza de su consulta, uno de nuestros especialistas se pondrá en contacto con usted en las próximas 24 horas hábiles para brindarle la mejor asistencia posible.</p>\n<p>Si su consulta es urgente, puede contactarnos directamente en:</p>\n<ul>\n<li>📧 Email prioritario: gorkahv@icloud.com</li>\n<li>📱 Teléfono: Por definir</li>\n</ul>\n<p>Horario de atención: Lunes a Viernes, 9:00 - 18:00</p>\n<br>\n<p>Atentamente,<br>\n<strong>Gorka<br>\nEmpresa de Gorka</strong></p>",
+        "options": {
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1300, 400],
+      "id": "send-escalation-response",
+      "name": "Respuesta Escalación Cliente"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Extraer Datos Email').item.json.email_id }}",
+        "labelIds": ["PROCESADO_AI"]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1300, 200],
+      "id": "label-processed",
+      "name": "Marcar como Procesado"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appXI12lWmW7TsHIm",
+          "mode": "list",
+          "cachedResultName": "CRM Empresa de Gorka"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblEmailLog",
+          "mode": "list",
+          "cachedResultName": "Email Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "EmailID": "={{ $('Extraer Datos Email').item.json.email_id }}",
+            "De": "={{ $('Extraer Datos Email').item.json.email_from }}",
+            "Asunto": "={{ $('Extraer Datos Email').item.json.email_subject }}",
+            "Fecha": "={{ $('Extraer Datos Email').item.json.email_date }}",
+            "TipoRespuesta": "={{ $('Verificar Escalación').item.json ? 'Escalación' : 'Automática' }}",
+            "Estado": "Procesado",
+            "RespuestaIA": "={{ $('AI Email Responder').item.json.output }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1500, 300],
+      "id": "log-to-airtable",
+      "name": "Registrar en Log"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger - Nuevos Emails": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos Email": {
+      "main": [
+        [
+          {
+            "node": "Verificar Cliente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Email Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Email Responder": {
+      "main": [
+        [
+          {
+            "node": "Verificar Escalación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Email Responder",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Herramienta Info Servicios": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Email Responder",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Escalación": {
+      "main": [
+        [
+          {
+            "node": "Enviar Respuesta AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Escalación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Respuesta AI": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Procesado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar Escalación": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Escalación Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como Procesado": {
+      "main": [
+        [
+          {
+            "node": "Registrar en Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Escalación Cliente": {
+      "main": [
+        [
+          {
+            "node": "Registrar en Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "gmail-customer-service"
+  },
+  "pinData": {},
+  "versionId": "1.0.0",
+  "triggerCount": 1,
+  "tags": []
+}

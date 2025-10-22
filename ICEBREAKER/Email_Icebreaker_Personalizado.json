@@ -1,0 +1,236 @@
+{
+  "name": "Email Icebreaker - Captación Automática",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtDay": [1, 2, 3, 4, 5],
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 300],
+      "id": "schedule-trigger",
+      "name": "Ejecutar Diariamente"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "zona_objetivo",
+              "name": "zona_objetivo",
+              "value": "Barcelona",
+              "type": "string"
+            },
+            {
+              "id": "sector_objetivo",
+              "name": "sector_objetivo",
+              "value": "Tecnología",
+              "type": "string"
+            },
+            {
+              "id": "emails_por_dia",
+              "name": "emails_por_dia",
+              "value": "20",
+              "type": "number"
+            },
+            {
+              "id": "campana_nombre",
+              "name": "campana_nombre",
+              "value": "Automatización IA Q1 2025",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [300, 300],
+      "id": "campaign-config",
+      "name": "Configuración Campaña"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appProspectDB",
+          "mode": "list",
+          "cachedResultName": "Base de Prospectos"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblProspectos",
+          "mode": "list",
+          "cachedResultName": "Prospectos"
+        },
+        "filterByFormula": "=AND({Zona}='{{ $json.zona_objetivo }}', {Sector}='{{ $json.sector_objetivo }}', {Estado}='No contactado')",
+        "options": {
+          "maxRecords": "={{ $json.emails_por_dia }}"
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "id": "get-prospects",
+      "name": "Obtener Prospectos"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [700, 300],
+      "id": "process-batch",
+      "name": "Procesar de a Uno"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.8
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [900, 450],
+      "id": "openai-model-ice",
+      "name": "OpenAI Model"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Genera un email de captación personalizado para:\n\nEmpresa: {{ $json.fields.Empresa }}\nContacto: {{ $json.fields.Nombre }} {{ $json.fields.Apellido }}\nCargo: {{ $json.fields.Cargo }}\nSector: {{ $json.fields.Sector }}\nWebsite: {{ $json.fields.Website }}\n\nCampaña: {{ $('Configuración Campaña').item.json.campana_nombre }}",
+        "options": {
+          "systemMessage": "Eres un experto en cold email outreach. Genera emails personalizados siguiendo esta estructura JSON:\n{\n  \"subject\": \"Línea de asunto atractiva (máx 60 caracteres)\",\n  \"body\": \"Cuerpo del email (máx 150 palabras)\",\n  \"ps\": \"Postdata opcional\"\n}\n\nDirectrices:\n- Apertura personalizada\n- Identificar pain point del sector\n- Propuesta de valor clara\n- CTA suave (reunión de 15 min)\n- Tono profesional pero cercano"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [900, 300],
+      "id": "ai-email-generator",
+      "name": "Generar Email Personalizado"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prospectData = $input.first().json;\nconst aiResponse = $('Generar Email Personalizado').first().json.output;\n\nlet emailData;\ntry {\n  emailData = JSON.parse(aiResponse);\n} catch (error) {\n  emailData = {\n    subject: 'Automatización con IA para ' + prospectData.fields.Empresa,\n    body: aiResponse,\n    ps: ''\n  };\n}\n\nconst trackingId = Math.random().toString(36).substring(7);\n\nreturn {\n  ...prospectData,\n  email_subject: emailData.subject,\n  email_body: emailData.body,\n  email_ps: emailData.ps,\n  tracking_id: trackingId\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "id": "format-email",
+      "name": "Formatear Email"
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1300, 300],
+      "id": "wait-between",
+      "name": "Esperar Entre Emails"
+    },
+    {
+      "parameters": {
+        "subject": "={{ $json.email_subject }}",
+        "toList": "={{ $json.fields.Email }}",
+        "emailType": "html",
+        "message": "=<html><body style='font-family: Arial, sans-serif;'>{{ $json.email_body.replace(/\\n/g, '<br>') }}<br><br><strong>Juan Carlos Méndez</strong><br>Business Development Manager<br>NEXO Soluciones IA<br>📧 juan.mendez@nexosoluciones.com</body></html>",
+        "options": {
+          "replyTo": "juan.mendez@nexosoluciones.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1500, 300],
+      "id": "send-email",
+      "name": "Enviar Email"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appProspectDB",
+          "mode": "list",
+          "cachedResultName": "Base de Prospectos"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblProspectos",
+          "mode": "list",
+          "cachedResultName": "Prospectos"
+        },
+        "id": "={{ $json.id }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Estado": "Email enviado",
+            "FechaContacto": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
+            "EmailAsunto": "={{ $json.email_subject }}",
+            "TrackingID": "={{ $json.tracking_id }}"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1700, 300],
+      "id": "update-prospect",
+      "name": "Actualizar Estado Prospecto"
+    }
+  ],
+  "connections": {
+    "Ejecutar Diariamente": {
+      "main": [[{"node": "Configuración Campaña", "type": "main", "index": 0}]]
+    },
+    "Configuración Campaña": {
+      "main": [[{"node": "Obtener Prospectos", "type": "main", "index": 0}]]
+    },
+    "Obtener Prospectos": {
+      "main": [[{"node": "Procesar de a Uno", "type": "main", "index": 0}]]
+    },
+    "Procesar de a Uno": {
+      "main": [[{"node": "Generar Email Personalizado", "type": "main", "index": 0}]]
+    },
+    "Generar Email Personalizado": {
+      "main": [[{"node": "Formatear Email", "type": "main", "index": 0}]]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [[{"node": "Generar Email Personalizado", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Formatear Email": {
+      "main": [[{"node": "Esperar Entre Emails", "type": "main", "index": 0}]]
+    },
+    "Esperar Entre Emails": {
+      "main": [[{"node": "Enviar Email", "type": "main", "index": 0}]]
+    },
+    "Enviar Email": {
+      "main": [[{"node": "Actualizar Estado Prospecto", "type": "main", "index": 0}]]
+    },
+    "Actualizar Estado Prospecto": {
+      "main": [[{"node": "Procesar de a Uno", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "icebreaker-email-automation"
+  },
+  "pinData": {},
+  "versionId": "1.0.0",
+  "triggerCount": 1,
+  "tags": []
+}

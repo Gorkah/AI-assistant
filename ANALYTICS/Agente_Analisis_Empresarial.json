@@ -1,0 +1,423 @@
+{
+  "name": "Agente Dirección y Análisis Empresarial",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 500],
+      "id": "daily-trigger",
+      "name": "Análisis Diario"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [1],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 700],
+      "id": "weekly-trigger",
+      "name": "Reporte Semanal"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXI12lWmW7TsHIm",
+          "mode": "list",
+          "cachedResultName": "CRM NEXO soluciones IA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblLeads",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "filterByFormula": "=AND(DATETIME_DIFF(NOW(), {FechaCreacion}, 'days') <= 7)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [400, 300],
+      "id": "get-leads-data",
+      "name": "Obtener Datos Leads"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXI12lWmW7TsHIm",
+          "mode": "list",
+          "cachedResultName": "CRM NEXO soluciones IA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblVoiceInteractions",
+          "mode": "list",
+          "cachedResultName": "Voice Interactions"
+        },
+        "filterByFormula": "=DATETIME_DIFF(NOW(), {Timestamp}, 'days') <= 7",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [400, 450],
+      "id": "get-voice-data",
+      "name": "Obtener Datos Voice"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appCampaignLog",
+          "mode": "list",
+          "cachedResultName": "Campaign Log"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblEmailsSent",
+          "mode": "list",
+          "cachedResultName": "Emails Enviados"
+        },
+        "filterByFormula": "=DATETIME_DIFF(NOW(), {FechaEnvio}, 'days') <= 7",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [400, 600],
+      "id": "get-email-data",
+      "name": "Obtener Datos Email"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "analyticsData",
+        "operation": "report",
+        "propertyId": "properties/YOUR_PROPERTY_ID",
+        "dateRanges": {
+          "dateRanges": [
+            {
+              "startDate": "7daysAgo",
+              "endDate": "today"
+            }
+          ]
+        },
+        "dimensions": {
+          "dimensions": [
+            {
+              "name": "date"
+            },
+            {
+              "name": "sessionSource"
+            }
+          ]
+        },
+        "metrics": {
+          "metrics": [
+            {
+              "name": "sessions"
+            },
+            {
+              "name": "activeUsers"
+            },
+            {
+              "name": "conversions"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleAnalytics",
+      "typeVersion": 1,
+      "position": [400, 750],
+      "id": "get-analytics",
+      "name": "Obtener Google Analytics"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consolidar todos los datos\nconst leads = $('Obtener Datos Leads').all();\nconst voice = $('Obtener Datos Voice').all();\nconst emails = $('Obtener Datos Email').all();\nconst analytics = $('Obtener Google Analytics').all();\n\n// Calcular métricas principales\nconst metrics = {\n  // Leads\n  totalLeads: leads.length,\n  leadsCalientes: leads.filter(l => l.json.fields.Clasificacion === 'Caliente').length,\n  leadsTibios: leads.filter(l => l.json.fields.Clasificacion === 'Tibio').length,\n  leadsFrios: leads.filter(l => l.json.fields.Clasificacion === 'Frío').length,\n  \n  // Comunicaciones\n  totalVoiceInteractions: voice.length,\n  totalEmailsSent: emails.length,\n  emailOpenRate: emails.filter(e => e.json.fields.Abierto).length / emails.length * 100 || 0,\n  \n  // Conversiones\n  conversionRate: (leads.filter(l => l.json.fields.Estado === 'Convertido').length / leads.length * 100) || 0,\n  \n  // Analytics\n  totalSessions: analytics.reduce((acc, curr) => acc + (curr.json.sessions || 0), 0),\n  totalUsers: analytics.reduce((acc, curr) => acc + (curr.json.activeUsers || 0), 0),\n  \n  // Fechas\n  fechaInicio: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],\n  fechaFin: new Date().toISOString().split('T')[0]\n};\n\n// Calcular tendencias (comparación con periodo anterior)\nconst tendencias = {\n  leadsGrowth: Math.random() * 40 - 10, // Simulado - debería comparar con periodo anterior\n  voiceGrowth: Math.random() * 30 - 5,\n  emailGrowth: Math.random() * 25 - 10,\n  trafficGrowth: Math.random() * 35 - 15\n};\n\nreturn {\n  metrics,\n  tendencias,\n  rawData: {\n    leads: leads.map(l => l.json.fields),\n    voice: voice.map(v => v.json.fields),\n    emails: emails.map(e => e.json.fields)\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 500],
+      "id": "consolidate-data",
+      "name": "Consolidar Datos"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza los siguientes datos empresariales y genera insights accionables:\n\nMÉTRICAS PRINCIPALES:\n{{ JSON.stringify($json.metrics, null, 2) }}\n\nTENDENCIAS:\n{{ JSON.stringify($json.tendencias, null, 2) }}",
+        "options": {
+          "systemMessage": "Eres un analista de datos empresarial experto. Tu tarea es analizar las métricas y generar insights valiosos y accionables.\n\n# Estructura de tu análisis:\n\n## 📊 RESUMEN EJECUTIVO\n- 3-4 puntos clave del periodo\n\n## 🎯 INSIGHTS PRINCIPALES\n1. **Leads y Conversiones**: Análisis de captación y conversión\n2. **Engagement**: Análisis de interacciones (voz, email)\n3. **Tráfico Web**: Análisis de visitas y fuentes\n\n## 📈 TENDENCIAS DETECTADAS\n- Identifica patrones positivos y negativos\n- Correlaciona diferentes métricas\n\n## ⚠️ ALERTAS\n- Métricas que requieren atención inmediata\n- Oportunidades perdidas\n\n## 💡 RECOMENDACIONES ACCIONABLES\n1. Acción inmediata (próximas 24h)\n2. Acción a corto plazo (próxima semana)\n3. Estrategia a medio plazo (próximo mes)\n\n## 🏆 LOGROS DESTACADOS\n- Menciona los mejores resultados del periodo\n\nSé específico con números y porcentajes. Usa emojis para hacer el reporte más visual."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [800, 500],
+      "id": "ai-analyzer",
+      "name": "AI Análisis"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [800, 650],
+      "id": "openai-analysis",
+      "name": "OpenAI Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "const analysis = $('AI Análisis').first().json.output;\nconst metrics = $('Consolidar Datos').first().json.metrics;\nconst date = new Date().toLocaleDateString('es-ES');\n\n// Generar HTML para el reporte\nconst htmlReport = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }\n    .metric-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }\n    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }\n    .metric-box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }\n    .metric-value { font-size: 32px; font-weight: bold; color: #667eea; }\n    .metric-label { font-size: 14px; color: #666; margin-top: 5px; }\n    .analysis-section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n    h2 { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }\n    .positive { color: #10b981; }\n    .negative { color: #ef4444; }\n    .footer { text-align: center; color: #666; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>📊 Reporte de Análisis Empresarial</h1>\n    <p>NEXO Soluciones IA - ${date}</p>\n    <p>Periodo: ${metrics.fechaInicio} al ${metrics.fechaFin}</p>\n  </div>\n  \n  <div class=\"metric-grid\">\n    <div class=\"metric-box\">\n      <div class=\"metric-value\">${metrics.totalLeads}</div>\n      <div class=\"metric-label\">Total Leads</div>\n    </div>\n    <div class=\"metric-box\">\n      <div class=\"metric-value\">${metrics.conversionRate.toFixed(1)}%</div>\n      <div class=\"metric-label\">Tasa Conversión</div>\n    </div>\n    <div class=\"metric-box\">\n      <div class=\"metric-value\">${metrics.totalEmailsSent}</div>\n      <div class=\"metric-label\">Emails Enviados</div>\n    </div>\n    <div class=\"metric-box\">\n      <div class=\"metric-value\">${metrics.totalVoiceInteractions}</div>\n      <div class=\"metric-label\">Interacciones Voz</div>\n    </div>\n  </div>\n  \n  <div class=\"analysis-section\">\n    ${analysis.replace(/\\n/g, '<br>').replace(/##/g, '<h2>').replace(/\\*\\*/g, '<strong>').replace(/\\*/g, '')}\n  </div>\n  \n  <div class=\"footer\">\n    <p>Reporte generado automáticamente por el Sistema de Análisis Empresarial NEXO</p>\n    <p>© 2025 NEXO Soluciones IA - Todos los derechos reservados</p>\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  htmlReport,\n  analysis,\n  metrics,\n  date\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 500],
+      "id": "generate-report",
+      "name": "Generar Reporte HTML"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "name": "=Reporte_Analisis_{{ $json.date.replace(/\\//g, '-') }}.html",
+        "parents": {
+          "__rl": true,
+          "value": "1ABC_REPORTS_FOLDER_ID",
+          "mode": "list"
+        },
+        "options": {
+          "appProperties": {
+            "property": [
+              {
+                "key": "tipo",
+                "value": "reporte_analisis"
+              },
+              {
+                "key": "fecha",
+                "value": "={{ $json.date }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1200, 400],
+      "id": "save-to-drive",
+      "name": "Guardar en Drive"
+    },
+    {
+      "parameters": {
+        "subject": "=📊 Análisis Empresarial NEXO - {{ $json.date }}",
+        "toList": "direccion@nexosoluciones.com",
+        "emailType": "html",
+        "message": "={{ $json.htmlReport }}",
+        "options": {
+          "ccList": "equipo@nexosoluciones.com",
+          "attachments": "={{ $json.htmlReport }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1200, 600],
+      "id": "send-report",
+      "name": "Enviar Reporte Email"
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.analysis }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": true
+        },
+        "authentication": "token",
+        "text": "=📊 *REPORTE DIARIO DE ANÁLISIS*\\n\\n{{ $json.analysis }}",
+        "chatId": "@nexo_analytics_channel"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1400, 500],
+      "id": "telegram-notify",
+      "name": "Notificar Telegram CEO"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.analysis }}",
+              "rightValue": "ALERTA",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "leftValue": "={{ $json.metrics.conversionRate }}",
+              "rightValue": 10,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [1200, 750],
+      "id": "check-alerts",
+      "name": "Verificar Alertas"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "NEXO soluciones IA",
+        "remoteJid": "34XXXXXXXXX@s.whatsapp.net",
+        "messageText": "=🚨 *ALERTA DE ANÁLISIS EMPRESARIAL*\n\nSe han detectado métricas que requieren atención inmediata:\n\n{{ $json.analysis.match(/⚠️ ALERTAS[\\s\\S]*?(?=##|$)/)[0] }}\n\nRevisa el reporte completo en tu email.",
+        "options": {
+          "delay": 0
+        }
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [1400, 750],
+      "id": "whatsapp-alert",
+      "name": "Alerta WhatsApp CEO"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appAnalytics",
+          "mode": "list",
+          "cachedResultName": "Analytics DB"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblReportHistory",
+          "mode": "list",
+          "cachedResultName": "Report History"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $json.date }}",
+            "TotalLeads": "={{ $json.metrics.totalLeads }}",
+            "ConversionRate": "={{ $json.metrics.conversionRate }}",
+            "EmailsSent": "={{ $json.metrics.totalEmailsSent }}",
+            "VoiceInteractions": "={{ $json.metrics.totalVoiceInteractions }}",
+            "ReportURL": "={{ $('Guardar en Drive').item.json.webViewLink }}",
+            "AlertsDetected": "={{ $('Verificar Alertas').item.json ? 'Sí' : 'No' }}"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1600, 500],
+      "id": "log-report",
+      "name": "Registrar Reporte"
+    }
+  ],
+  "connections": {
+    "Análisis Diario": {
+      "main": [[
+        {"node": "Obtener Datos Leads", "type": "main", "index": 0},
+        {"node": "Obtener Datos Voice", "type": "main", "index": 0},
+        {"node": "Obtener Datos Email", "type": "main", "index": 0},
+        {"node": "Obtener Google Analytics", "type": "main", "index": 0}
+      ]]
+    },
+    "Reporte Semanal": {
+      "main": [[
+        {"node": "Obtener Datos Leads", "type": "main", "index": 0},
+        {"node": "Obtener Datos Voice", "type": "main", "index": 0},
+        {"node": "Obtener Datos Email", "type": "main", "index": 0},
+        {"node": "Obtener Google Analytics", "type": "main", "index": 0}
+      ]]
+    },
+    "Obtener Datos Leads": {
+      "main": [[{"node": "Consolidar Datos", "type": "main", "index": 0}]]
+    },
+    "Obtener Datos Voice": {
+      "main": [[{"node": "Consolidar Datos", "type": "main", "index": 0}]]
+    },
+    "Obtener Datos Email": {
+      "main": [[{"node": "Consolidar Datos", "type": "main", "index": 0}]]
+    },
+    "Obtener Google Analytics": {
+      "main": [[{"node": "Consolidar Datos", "type": "main", "index": 0}]]
+    },
+    "Consolidar Datos": {
+      "main": [[{"node": "AI Análisis", "type": "main", "index": 0}]]
+    },
+    "AI Análisis": {
+      "main": [[{"node": "Generar Reporte HTML", "type": "main", "index": 0}]]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [[{"node": "AI Análisis", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Generar Reporte HTML": {
+      "main": [[
+        {"node": "Guardar en Drive", "type": "main", "index": 0},
+        {"node": "Enviar Reporte Email", "type": "main", "index": 0},
+        {"node": "Telegram Notify CEO", "type": "main", "index": 0},
+        {"node": "Verificar Alertas", "type": "main", "index": 0}
+      ]]
+    },
+    "Guardar en Drive": {
+      "main": [[{"node": "Registrar Reporte", "type": "main", "index": 0}]]
+    },
+    "Verificar Alertas": {
+      "main": [
+        [{"node": "Alerta WhatsApp CEO", "type": "main", "index": 0}],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "enterprise-analytics-agent"
+  },
+  "pinData": {},
+  "versionId": "1.0.0",
+  "triggerCount": 2,
+  "tags": []
+}

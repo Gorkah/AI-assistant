@@ -1,0 +1,372 @@
+{
+  "name": "Agente Atención Cliente - Voice WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "voice-webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300],
+      "id": "voice-webhook",
+      "name": "Webhook Voice Messages",
+      "webhookId": "voice-whatsapp-webhook"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.data.message.type }}",
+                    "rightValue": "audioMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [300, 300],
+      "id": "check-message-type",
+      "name": "Verificar Tipo Mensaje"
+    },
+    {
+      "parameters": {
+        "resource": "chat-api",
+        "operation": "get-media-base64",
+        "instanceName": "={{ $json.body.instance }}",
+        "messageId": "={{ $json.body.data.key.id }}"
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [500, 200],
+      "id": "get-audio",
+      "name": "Obtener Audio"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "parameterType": "formBinaryData",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "model",
+              "value": "whisper-1"
+            },
+            {
+              "name": "language",
+              "value": "es"
+            },
+            {
+              "name": "response_format",
+              "value": "json"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 200],
+      "id": "transcribe-audio",
+      "name": "Transcribir Audio (Whisper)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "Eres el asistente virtual de voz de NEXO Soluciones IA. Los clientes te envían mensajes de voz que han sido transcritos. Debes responder de manera clara y concisa, considerando que tu respuesta será convertida a audio.\n\nDirectrices para respuestas de voz:\n1. Usa frases cortas y claras\n2. Evita jerga técnica compleja\n3. Sé más conversacional que en texto escrito\n4. Menciona números y fechas de forma clara\n5. Si necesitas compartir información compleja, ofrece enviar detalles por texto\n6. Máximo 100 palabras por respuesta\n\nInformación de la empresa:\n- Paquetes: Estándar, Premium y NEXA\n- Especialidad: Automatización con IA\n- Horario: Lunes a Viernes, 9 a 18 horas"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [900, 200],
+      "id": "ai-voice-responder",
+      "name": "AI Voice Responder"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [900, 350],
+      "id": "openai-model-voice",
+      "name": "OpenAI Model"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/speech",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.apiKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "tts-1"
+            },
+            {
+              "name": "input",
+              "value": "={{ $('AI Voice Responder').item.json.output }}"
+            },
+            {
+              "name": "voice",
+              "value": "nova"
+            },
+            {
+              "name": "response_format",
+              "value": "mp3"
+            },
+            {
+              "name": "speed",
+              "value": "1.0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 200],
+      "id": "generate-audio",
+      "name": "Generar Audio (TTS)"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "operation": "send-audio",
+        "instanceName": "={{ $('Webhook Voice Messages').item.json.body.instance }}",
+        "remoteJid": "={{ $('Webhook Voice Messages').item.json.body.data.key.remoteJid }}",
+        "media": {
+          "binaryPropertyName": "data"
+        },
+        "options": {
+          "delay": 1500,
+          "ptt": true
+        }
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [1300, 200],
+      "id": "send-voice-response",
+      "name": "Enviar Respuesta de Voz"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "text_response",
+              "name": "text_response",
+              "value": "={{ $('AI Voice Responder').item.json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "add_text_followup",
+              "name": "add_text_followup",
+              "value": "={{ $('AI Voice Responder').item.json.output.includes('enviar detalles') || $('AI Voice Responder').item.json.output.includes('más información') }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 350],
+      "id": "prepare-text-followup",
+      "name": "Preparar Seguimiento Texto"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.add_text_followup }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [1300, 350],
+      "id": "check-text-followup",
+      "name": "Verificar Seguimiento"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Webhook Voice Messages').item.json.body.instance }}",
+        "remoteJid": "={{ $('Webhook Voice Messages').item.json.body.data.key.remoteJid }}",
+        "messageText": "📄 Te envío información adicional por texto:\n\n{{ $('AI Voice Responder').item.json.output }}\n\n¿Necesitas más detalles sobre algún punto específico?",
+        "options": {
+          "delay": 3000
+        }
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [1500, 350],
+      "id": "send-text-followup",
+      "name": "Enviar Seguimiento Texto"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appVoiceLog",
+          "mode": "list",
+          "cachedResultName": "Voice Log"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblVoiceInteractions",
+          "mode": "list",
+          "cachedResultName": "Voice Interactions"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Phone": "={{ $('Webhook Voice Messages').item.json.body.data.key.remoteJid }}",
+            "TranscribedText": "={{ $('Transcribir Audio (Whisper)').item.json.text }}",
+            "AIResponse": "={{ $('AI Voice Responder').item.json.output }}",
+            "Timestamp": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}",
+            "Duration": "={{ $json.duration || 'N/A' }}",
+            "Type": "Voice"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1700, 200],
+      "id": "log-interaction",
+      "name": "Registrar Interacción"
+    }
+  ],
+  "connections": {
+    "Webhook Voice Messages": {
+      "main": [[{"node": "Verificar Tipo Mensaje", "type": "main", "index": 0}]]
+    },
+    "Verificar Tipo Mensaje": {
+      "main": [
+        [{"node": "Obtener Audio", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Obtener Audio": {
+      "main": [[{"node": "Transcribir Audio (Whisper)", "type": "main", "index": 0}]]
+    },
+    "Transcribir Audio (Whisper)": {
+      "main": [[{"node": "AI Voice Responder", "type": "main", "index": 0}]]
+    },
+    "AI Voice Responder": {
+      "main": [[
+        {"node": "Generar Audio (TTS)", "type": "main", "index": 0},
+        {"node": "Preparar Seguimiento Texto", "type": "main", "index": 0}
+      ]]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [[{"node": "AI Voice Responder", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Generar Audio (TTS)": {
+      "main": [[{"node": "Enviar Respuesta de Voz", "type": "main", "index": 0}]]
+    },
+    "Enviar Respuesta de Voz": {
+      "main": [[{"node": "Registrar Interacción", "type": "main", "index": 0}]]
+    },
+    "Preparar Seguimiento Texto": {
+      "main": [[{"node": "Verificar Seguimiento", "type": "main", "index": 0}]]
+    },
+    "Verificar Seguimiento": {
+      "main": [
+        [{"node": "Enviar Seguimiento Texto", "type": "main", "index": 0}],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "voice-whatsapp-agent"
+  },
+  "pinData": {},
+  "versionId": "1.0.0",
+  "triggerCount": 1,
+  "tags": []
+}

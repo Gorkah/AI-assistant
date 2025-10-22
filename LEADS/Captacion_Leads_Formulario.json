@@ -1,0 +1,353 @@
+{
+  "name": "Captación de Leads - Formulario Inteligente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-capture-form",
+        "options": {
+          "responseData": "successMessage",
+          "responseDataSuccessMessage": "¡Gracias! Hemos recibido tu información y te contactaremos pronto."
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300],
+      "id": "webhook-lead-capture",
+      "name": "Webhook Formulario",
+      "webhookId": "lead-capture-form-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "nombre",
+              "name": "nombre",
+              "value": "={{ $json.body.nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "apellido",
+              "name": "apellido",
+              "value": "={{ $json.body.apellido }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "telefono",
+              "name": "telefono",
+              "value": "={{ $json.body.telefono }}",
+              "type": "string"
+            },
+            {
+              "id": "empresa",
+              "name": "empresa",
+              "value": "={{ $json.body.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "mensaje",
+              "name": "mensaje",
+              "value": "={{ $json.body.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "interes",
+              "name": "interes",
+              "value": "={{ $json.body.interes }}",
+              "type": "string"
+            },
+            {
+              "id": "fecha_registro",
+              "name": "fecha_registro",
+              "value": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            },
+            {
+              "id": "fuente",
+              "name": "fuente",
+              "value": "={{ $json.body.fuente || 'Formulario Web' }}",
+              "type": "string"
+            },
+            {
+              "id": "lead_score",
+              "name": "lead_score",
+              "value": "0",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [300, 300],
+      "id": "set-lead-data",
+      "name": "Procesar Datos Lead"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza el siguiente lead y asigna un score del 0 al 100 basándote en:\n- Completitud de información (20 puntos)\n- Interés expresado (30 puntos)\n- Tamaño de empresa (20 puntos)\n- Urgencia detectada (30 puntos)\n\nDatos del lead:\nNombre: {{ $json.nombre }} {{ $json.apellido }}\nEmail: {{ $json.email }}\nTeléfono: {{ $json.telefono }}\nEmpresa: {{ $json.empresa }}\nInterés: {{ $json.interes }}\nMensaje: {{ $json.mensaje }}\n\nResponde SOLO con un número del 0 al 100 y una breve justificación.",
+        "options": {
+          "systemMessage": "Eres un experto en calificación de leads. Tu tarea es asignar un puntaje objetivo basado en los criterios proporcionados."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [500, 300],
+      "id": "ai-lead-scoring",
+      "name": "AI Lead Scoring"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [500, 450],
+      "id": "openai-model",
+      "name": "OpenAI Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "const leadData = $input.first().json;\nconst aiResponse = $('AI Lead Scoring').first().json.output || '50';\n\n// Extraer el score del texto de respuesta\nconst scoreMatch = aiResponse.match(/\\d+/);\nconst score = scoreMatch ? parseInt(scoreMatch[0]) : 50;\n\n// Clasificar el lead\nlet clasificacion = 'Frío';\nif (score >= 80) clasificacion = 'Caliente';\nelse if (score >= 60) clasificacion = 'Tibio';\n\nreturn {\n  ...leadData,\n  lead_score: score,\n  clasificacion: clasificacion,\n  ai_analysis: aiResponse\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "id": "process-score",
+      "name": "Procesar Score"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $json.fecha_registro }}",
+            "Nombre": "={{ $json.nombre }}",
+            "Apellido": "={{ $json.apellido }}",
+            "Email": "={{ $json.email }}",
+            "Telefono": "={{ $json.telefono }}",
+            "Empresa": "={{ $json.empresa }}",
+            "Interes": "={{ $json.interes }}",
+            "Mensaje": "={{ $json.mensaje }}",
+            "Fuente": "={{ $json.fuente }}",
+            "Score": "={{ $json.lead_score }}",
+            "Clasificacion": "={{ $json.clasificacion }}",
+            "Estado": "Nuevo",
+            "Asignado a": "",
+            "Notas": "={{ $json.ai_analysis }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [900, 300],
+      "id": "save-to-sheets",
+      "name": "Guardar en Google Sheets"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.lead_score }}",
+                    "rightValue": 80,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Lead Caliente"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1100, 300],
+      "id": "check-hot-lead",
+      "name": "Verificar Lead Caliente"
+    },
+    {
+      "parameters": {
+        "subject": "=🔥 LEAD CALIENTE - {{ $json.nombre }} {{ $json.apellido }} - Score: {{ $json.lead_score }}",
+        "toList": "ventas@nexosoluciones.com",
+        "emailType": "html",
+        "message": "=<h2>🎯 Nuevo Lead Caliente Detectado</h2>\n<p><strong>Score: {{ $json.lead_score }}/100</strong></p>\n<hr>\n<h3>Información del Lead:</h3>\n<ul>\n<li><strong>Nombre:</strong> {{ $json.nombre }} {{ $json.apellido }}</li>\n<li><strong>Email:</strong> {{ $json.email }}</li>\n<li><strong>Teléfono:</strong> {{ $json.telefono }}</li>\n<li><strong>Empresa:</strong> {{ $json.empresa }}</li>\n<li><strong>Interés:</strong> {{ $json.interes }}</li>\n</ul>\n<h3>Mensaje:</h3>\n<p>{{ $json.mensaje }}</p>\n<h3>Análisis AI:</h3>\n<p>{{ $json.ai_analysis }}</p>\n<hr>\n<p><strong>Acción requerida:</strong> Contactar en las próximas 2 horas</p>",
+        "options": {
+          "ccList": "",
+          "replyTo": "={{ $json.email }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1300, 200],
+      "id": "notify-hot-lead",
+      "name": "Notificar Lead Caliente"
+    },
+    {
+      "parameters": {
+        "subject": "=📊 Nuevo Lead Registrado - {{ $json.nombre }} {{ $json.apellido }}",
+        "toList": "marketing@nexosoluciones.com",
+        "emailType": "html",
+        "message": "=<h2>Nuevo Lead Registrado</h2>\n<p><strong>Clasificación: {{ $json.clasificacion }}</strong></p>\n<p><strong>Score: {{ $json.lead_score }}/100</strong></p>\n<hr>\n<h3>Información:</h3>\n<ul>\n<li><strong>Nombre:</strong> {{ $json.nombre }} {{ $json.apellido }}</li>\n<li><strong>Email:</strong> {{ $json.email }}</li>\n<li><strong>Empresa:</strong> {{ $json.empresa }}</li>\n<li><strong>Fuente:</strong> {{ $json.fuente }}</li>\n</ul>\n<p><a href='https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID'>Ver en Google Sheets</a></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1300, 400],
+      "id": "notify-standard",
+      "name": "Notificar Lead Estándar"
+    },
+    {
+      "parameters": {
+        "content": "## Configuración del Webhook\n\nEste webhook puede recibir datos desde:\n- Typeform\n- Tally Forms\n- Google Forms (via Apps Script)\n- Cualquier formulario web personalizado\n\n### Campos esperados:\n- nombre (requerido)\n- apellido (requerido) \n- email (requerido)\n- telefono (opcional)\n- empresa (opcional)\n- interes (opcional)\n- mensaje (opcional)\n- fuente (opcional)\n\n### URL del webhook:\n`https://tu-n8n-instance.com/webhook/lead-capture-form`",
+        "height": 272.8851013153478,
+        "width": 397.71392262332976,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, 200],
+      "id": "webhook-info",
+      "name": "Webhook Info"
+    }
+  ],
+  "connections": {
+    "Webhook Formulario": {
+      "main": [
+        [
+          {
+            "node": "Procesar Datos Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Datos Lead": {
+      "main": [
+        [
+          {
+            "node": "AI Lead Scoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Lead Scoring": {
+      "main": [
+        [
+          {
+            "node": "Procesar Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Lead Scoring",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Score": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Verificar Lead Caliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Lead Caliente": {
+      "main": [
+        [
+          {
+            "node": "Notificar Lead Caliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Lead Estándar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "lead-capture-intelligent"
+  },
+  "pinData": {},
+  "versionId": "1.0.0",
+  "triggerCount": 1,
+  "tags": []
+}
