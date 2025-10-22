@@ -59,13 +59,30 @@ else
 fi
 
 # ================================================
-# OBTENER IP PÚBLICA
+# OBTENER IP PÚBLICA (IPv4)
 # ================================================
 log "Obteniendo IP pública del VPS..."
-VPS_IP=$(curl -s ifconfig.me)
+
+# Intentar obtener IPv4 específicamente
+VPS_IP=$(curl -4 -s ifconfig.me 2>/dev/null)
+
+# Si falla, intentar con otros métodos
+if [ -z "$VPS_IP" ]; then
+    VPS_IP=$(curl -s https://api.ipify.org 2>/dev/null)
+fi
+
+# Si aún falla, usar IP local
 if [ -z "$VPS_IP" ]; then
     VPS_IP=$(hostname -I | awk '{print $1}')
 fi
+
+# Verificar si es IPv6 y advertir
+if [[ "$VPS_IP" =~ ":" ]]; then
+    warning "Se detectó IPv6: $VPS_IP"
+    log "Intentando obtener IPv4..."
+    VPS_IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1' | head -1)
+fi
+
 log "IP detectada: $VPS_IP"
 
 # ================================================
@@ -329,7 +346,7 @@ BASIC_AUTH_PASSWORD=$(openssl rand -base64 16)
 
 log "Puerto: $ASSIGNED_PORT | Creando BD..."
 
-docker exec nexo_postgres psql -U $POSTGRES_ADMIN_USER <<-EOSQL
+docker exec nexo_postgres psql -U $POSTGRES_ADMIN_USER -d postgres <<-EOSQL
     CREATE DATABASE $DB_NAME;
     CREATE USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';
     GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;

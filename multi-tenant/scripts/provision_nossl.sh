@@ -64,8 +64,7 @@ BASIC_AUTH_PASSWORD=$(openssl rand -base64 16)
 log "Puerto asignado: $ASSIGNED_PORT"
 log "Creando base de datos..."
 
-# Crear base de datos
-docker exec nexo_postgres psql -U $POSTGRES_ADMIN_USER <<-EOSQL
+docker exec nexo_postgres psql -U $POSTGRES_ADMIN_USER -d postgres <<-EOSQL
     CREATE DATABASE $DB_NAME;
     CREATE USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';
     GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
