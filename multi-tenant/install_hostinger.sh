@@ -153,10 +153,10 @@ else
 fi
 
 # ================================================
-# DESCARGAR REPOSITORIO
+# CONFIGURAR DIRECTORIO
 # ================================================
 echo ""
-log "Configurando repositorio..."
+log "Configurando directorio de instalación..."
 
 INSTALL_DIR="/opt/nexo-ai"
 
@@ -171,30 +171,19 @@ if [ -d "$INSTALL_DIR" ]; then
     fi
 fi
 
-if [ ! -d "$INSTALL_DIR" ]; then
-    mkdir -p "$INSTALL_DIR"
-    cd "$INSTALL_DIR"
-    
-    # Si tienes el repo en GitHub
-    # git clone https://github.com/tu-usuario/AI-assistant.git .
-    
-    # Por ahora, copiar archivos locales si existen
-    if [ -d "/root/AI-assistant/multi-tenant" ]; then
-        log "Copiando archivos desde instalación local..."
-        cp -r /root/AI-assistant/multi-tenant/* "$INSTALL_DIR/"
-    else
-        warning "No se encontró repositorio local"
-        warning "Crea los archivos manualmente en: $INSTALL_DIR"
-    fi
-fi
-
+mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
 # ================================================
-# CREAR DIRECTORIOS
+# CREAR ESTRUCTURA
 # ================================================
 log "Creando estructura de directorios..."
-mkdir -p instances scripts control-panel/templates
+mkdir -p instances scripts control-panel/templates logs
+
+# ================================================
+# CREAR ARCHIVOS NECESARIOS
+# ================================================
+log "Generando archivos de configuración..."
 
 # ================================================
 # CONFIGURAR VARIABLES DE ENTORNO
@@ -236,6 +225,205 @@ EOF
 
 log "Archivo .env creado"
 
+# ================================================
+# CREAR DOCKER-COMPOSE
+# ================================================
+log "Creando docker-compose-nossl.yml..."
+
+cat > docker-compose-nossl.yml <<'DOCKEREOF'
+version: '3.8'
+
+networks:
+  nexo_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nexo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:-nexo_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-ChangeThisPassword123!}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nexo_network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER:-nexo_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexo_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-RedisPassword123!}
+    volumes:
+      - redis_data:/data
+    networks:
+      - nexo_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+DOCKEREOF
+
+log "docker-compose-nossl.yml creado"
+
+# ================================================
+# CREAR SCRIPT DE APROVISIONAMIENTO
+# ================================================
+log "Creando script de aprovisionamiento..."
+
+cat > scripts/provision_nossl.sh <<'PROVEOF'
+#!/bin/bash
+set -e
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+log() { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1" >&2; exit 1; }
+
+[ $# -lt 2 ] && error "Uso: $0 <cliente_id> <plan>"
+
+CLIENT_ID=$1
+PLAN=$2
+
+[[ ! $CLIENT_ID =~ ^[a-z0-9-]+$ ]] && error "cliente_id inválido"
+[[ ! $PLAN =~ ^(estandar|premium|nexa)$ ]] && error "Plan: estandar|premium|nexa"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+INSTANCES_DIR="$PROJECT_ROOT/instances"
+
+source "$PROJECT_ROOT/.env"
+
+[ -d "$INSTANCES_DIR/$CLIENT_ID" ] && error "Instancia ya existe"
+
+log "Creando instancia: $CLIENT_ID - Plan: $PLAN"
+
+CURRENT_INSTANCES=$(ls -1 "$INSTANCES_DIR" 2>/dev/null | wc -l)
+ASSIGNED_PORT=$((BASE_PORT + CURRENT_INSTANCES))
+
+CLIENT_DIR="$INSTANCES_DIR/$CLIENT_ID"
+mkdir -p "$CLIENT_DIR"/{data,workflows,backups,logs}
+
+DB_NAME="n8n_${CLIENT_ID//-/_}"
+DB_USER="n8n_${CLIENT_ID//-/_}"
+DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+N8N_ENCRYPTION_KEY=$(openssl rand -base64 32)
+BASIC_AUTH_PASSWORD=$(openssl rand -base64 16)
+
+log "Puerto: $ASSIGNED_PORT | Creando BD..."
+
+docker exec nexo_postgres psql -U $POSTGRES_ADMIN_USER <<-EOSQL
+    CREATE DATABASE $DB_NAME;
+    CREATE USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';
+    GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
+EOSQL
+
+cat > "$CLIENT_DIR/.env" <<EOF
+N8N_HOST=0.0.0.0
+N8N_PORT=5678
+N8N_PROTOCOL=http
+N8N_EDITOR_BASE_URL=http://${VPS_IP}:${ASSIGNED_PORT}
+WEBHOOK_URL=http://${VPS_IP}:${ASSIGNED_PORT}
+
+DB_TYPE=postgresdb
+DB_POSTGRESDB_HOST=postgres
+DB_POSTGRESDB_PORT=5432
+DB_POSTGRESDB_DATABASE=$DB_NAME
+DB_POSTGRESDB_USER=$DB_USER
+DB_POSTGRESDB_PASSWORD=$DB_PASSWORD
+
+N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
+
+N8N_BASIC_AUTH_ACTIVE=true
+N8N_BASIC_AUTH_USER=admin
+N8N_BASIC_AUTH_PASSWORD=$BASIC_AUTH_PASSWORD
+
+EXECUTIONS_DATA_SAVE_ON_ERROR=all
+EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+GENERIC_TIMEZONE=${DEFAULT_TIMEZONE}
+EOF
+
+cat > "$CLIENT_DIR/docker-compose.yml" <<DEOF
+version: '3.8'
+networks:
+  nexo_network:
+    external: true
+services:
+  n8n_${CLIENT_ID}:
+    image: n8nio/n8n:latest
+    container_name: n8n_${CLIENT_ID}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/home/node/.n8n
+      - ./workflows:/workflows
+    networks:
+      - nexo_network
+    ports:
+      - "${ASSIGNED_PORT}:5678"
+DEOF
+
+log "Iniciando contenedor..."
+cd "$CLIENT_DIR"
+docker-compose up -d
+
+log "Esperando n8n..."
+for i in {1..30}; do
+    if curl -s "http://localhost:${ASSIGNED_PORT}" | grep -q "n8n" 2>/dev/null; then
+        break
+    fi
+    sleep 2
+done
+
+cat > "$CLIENT_DIR/manage.sh" <<'MANEOF'
+#!/bin/bash
+case $1 in
+    start) docker-compose up -d ;;
+    stop) docker-compose down ;;
+    restart) docker-compose restart ;;
+    logs) docker-compose logs -f --tail=100 ;;
+    status) docker-compose ps ;;
+    backup) tar -czf "backups/backup_$(date +%Y%m%d_%H%M%S).tar.gz" data/ ;;
+    *) echo "Uso: $0 {start|stop|restart|logs|status|backup}" ;;
+esac
+MANEOF
+
+chmod +x "$CLIENT_DIR/manage.sh"
+
+echo ""
+log "================================================"
+log "   ✅ INSTANCIA CREADA"
+log "================================================"
+log ""
+log "Cliente: $CLIENT_ID"
+log "Plan: $PLAN"
+log "URL: http://${VPS_IP}:${ASSIGNED_PORT}"
+log "Usuario: admin"
+log "Contraseña: $BASIC_AUTH_PASSWORD"
+log ""
+PROVEOF
+
+chmod +x scripts/provision_nossl.sh
+
+log "Scripts creados"
+
 # Mostrar credenciales
 echo ""
 echo -e "${YELLOW}================================================"
@@ -256,10 +444,6 @@ read -p "Presiona Enter para continuar..."
 # ================================================
 echo ""
 log "Iniciando servicios base..."
-
-if [ ! -f "docker-compose-nossl.yml" ]; then
-    error "Archivo docker-compose-nossl.yml no encontrado"
-fi
 
 docker-compose -f docker-compose-nossl.yml up -d
 
