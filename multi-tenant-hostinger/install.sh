@@ -97,14 +97,14 @@ cd ..
 
 # Iniciar servicios
 log "Iniciando servicios base..."
-docker-compose -f docker-compose.panel.yml up -d postgres_shared redis_shared
+docker compose -f docker-compose.panel.yml up -d postgres_shared redis_shared
 
 log "Esperando a que PostgreSQL esté listo..."
 sleep 15
 
 # Iniciar panel de control
 log "Iniciando panel de control..."
-docker-compose -f docker-compose.panel.yml up -d panel_control
+docker compose -f docker-compose.panel.yml up -d panel_control
 
 # Esperar a que esté listo
 log "Esperando a que el panel esté listo..."
@@ -138,8 +138,8 @@ log "2. Crea tu primera instancia desde el panel"
 log "3. Los workflows se importarán automáticamente"
 log ""
 log "Comandos útiles:"
-log "  docker-compose -f docker-compose.panel.yml ps       # Ver estado"
-log "  docker-compose -f docker-compose.panel.yml logs -f  # Ver logs"
+log "  docker compose -f docker-compose.panel.yml ps       # Ver estado"
+log "  docker compose -f docker-compose.panel.yml logs -f  # Ver logs"
 log "  docker ps | grep n8n_                               # Ver instancias de clientes"
 log ""
 log "Para crear instancias manualmente:"

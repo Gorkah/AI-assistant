@@ -167,10 +167,66 @@ def run_command(cmd, cwd=None):
     except Exception as e:
         return False, "", str(e)
 
+def create_env_file(client_id, plan_config, db_config=None, apis=None):
+    """Crear archivo .env con todas las configuraciones y APIs"""
+    admin_password = generate_password()
+    
+    env_content = f"""# Instancia: {client_id}
+# Plan: {plan_config['name']}
+# Generado: {datetime.utcnow().isoformat()}
+
+# Configuración n8n
+N8N_HOST={client_id}.{BASE_DOMAIN}
+N8N_PORT=5678
+N8N_PROTOCOL=http
+WEBHOOK_URL=https://{client_id}.{BASE_DOMAIN}/
+NODE_ENV=production
+
+# Autenticación
+N8N_BASIC_AUTH_ACTIVE=true
+N8N_BASIC_AUTH_USER={client_id}_admin
+N8N_BASIC_AUTH_PASSWORD={admin_password}
+
+# Timezone
+GENERIC_TIMEZONE=Europe/Madrid
+
+# Ejecuciones
+EXECUTIONS_DATA_SAVE_ON_ERROR=all
+EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+EXECUTIONS_DATA_MAX_AGE=336
+"""
+    
+    # Base de datos si aplica
+    if db_config:
+        env_content += f"""\n# Base de Datos PostgreSQL
+DB_TYPE=postgresdb
+DB_POSTGRESDB_HOST=postgres_{client_id}
+DB_POSTGRESDB_PORT=5432
+DB_POSTGRESDB_DATABASE={db_config['db_name']}
+DB_POSTGRESDB_USER={db_config['db_user']}
+DB_POSTGRESDB_PASSWORD={db_config['db_password']}
+"""
+    
+    # APIs si se proporcionaron
+    if apis:
+        env_content += "\n# APIs Configuradas\n"
+        if 'openai_key' in apis and apis['openai_key']:
+            env_content += f"OPENAI_API_KEY={apis['openai_key']}\n"
+        if 'evolution_url' in apis and apis['evolution_url']:
+            env_content += f"EVOLUTION_API_URL={apis['evolution_url']}\n"
+        if 'evolution_key' in apis and apis['evolution_key']:
+            env_content += f"EVOLUTION_API_KEY={apis['evolution_key']}\n"
+        if 'airtable_pat' in apis and apis['airtable_pat']:
+            env_content += f"AIRTABLE_PAT={apis['airtable_pat']}\n"
+        if 'telegram_token' in apis and apis['telegram_token']:
+            env_content += f"TELEGRAM_BOT_TOKEN={apis['telegram_token']}\n"
+        if 'gmail_credentials' in apis and apis['gmail_credentials']:
+            env_content += f"GMAIL_CREDENTIALS={apis['gmail_credentials']}\n"
+    
+    return env_content, admin_password
+
 def create_docker_compose(client_id, plan_config, db_config=None, evolution_config=None):
     """Generar docker-compose.yml según el pack"""
-    
-    admin_password = generate_password()
     
     compose = {
         'version': '3.8',
@@ -239,38 +295,12 @@ def create_docker_compose(client_id, plan_config, db_config=None, evolution_conf
             'api_key': compose['services'][f'evolution_{client_id}']['environment']['AUTHENTICATION_API_KEY']
         }
     
-    # Servicio n8n principal
-    n8n_env = {
-        'N8N_HOST': f'{client_id}.{BASE_DOMAIN}',
-        'N8N_PORT': '5678',
-        'N8N_PROTOCOL': 'http',
-        'WEBHOOK_URL': f'https://{client_id}.{BASE_DOMAIN}/',
-        'NODE_ENV': 'production',
-        'N8N_BASIC_AUTH_ACTIVE': 'true',
-        'N8N_BASIC_AUTH_USER': f'{client_id}_admin',
-        'N8N_BASIC_AUTH_PASSWORD': admin_password,
-        'GENERIC_TIMEZONE': 'Europe/Madrid',
-        'EXECUTIONS_DATA_SAVE_ON_ERROR': 'all',
-        'EXECUTIONS_DATA_SAVE_ON_SUCCESS': 'all',
-        'EXECUTIONS_DATA_MAX_AGE': '336'
-    }
-    
-    # Configurar PostgreSQL si está disponible
-    if db_config:
-        n8n_env.update({
-            'DB_TYPE': 'postgresdb',
-            'DB_POSTGRESDB_HOST': f'postgres_{client_id}',
-            'DB_POSTGRESDB_PORT': '5432',
-            'DB_POSTGRESDB_DATABASE': db_config['db_name'],
-            'DB_POSTGRESDB_USER': db_config['db_user'],
-            'DB_POSTGRESDB_PASSWORD': db_config['db_password']
-        })
-    
+    # Servicio n8n principal (usa archivo .env en lugar de environment directo)
     compose['services'][f'n8n_{client_id}'] = {
         'image': 'docker.n8n.io/n8nio/n8n:latest',
         'container_name': f'n8n_{client_id}',
         'restart': 'unless-stopped',
-        'environment': n8n_env,
+        'env_file': ['.env'],
         'volumes': [f'n8n_data_{client_id}:/home/node/.n8n'],
         'networks': ['root_default'],
         'labels': [
@@ -298,7 +328,7 @@ def create_docker_compose(client_id, plan_config, db_config=None, evolution_conf
     
     compose['volumes'][f'n8n_data_{client_id}'] = None
     
-    return compose, admin_password, db_config, evolution_config
+    return compose, db_config, evolution_config
 
 def deploy_instance(client_id, plan, company_name='', contact_email='', apis=None):
     """Desplegar nueva instancia"""
@@ -317,8 +347,22 @@ def deploy_instance(client_id, plan, company_name='', contact_email='', apis=Non
         os.makedirs(client_dir, exist_ok=True)
         os.makedirs(os.path.join(client_dir, 'workflows'), exist_ok=True)
         
+        # Generar credenciales y archivo .env
+        env_content, admin_password = create_env_file(
+            client_id, plan_config, 
+            db_config={'db_name': f"n8n_{client_id.replace('-', '_')}", 
+                      'db_user': f"n8n_{client_id.replace('-', '_')}",
+                      'db_password': generate_password(24)} if plan_config.get('use_postgres') else None,
+            apis=apis
+        )
+        
+        # Guardar archivo .env
+        env_path = os.path.join(client_dir, '.env')
+        with open(env_path, 'w') as f:
+            f.write(env_content)
+        
         # Generar docker-compose
-        compose_data, admin_password, db_config, evolution_config = create_docker_compose(
+        compose_data, db_config, evolution_config = create_docker_compose(
             client_id, plan_config
         )
         
@@ -328,9 +372,9 @@ def deploy_instance(client_id, plan, company_name='', contact_email='', apis=Non
             import yaml
             yaml.dump(compose_data, f, default_flow_style=False)
         
-        # Iniciar servicios
+        # Iniciar servicios con Docker Compose V2
         success, stdout, stderr = run_command(
-            f'cd {client_dir} && docker-compose up -d',
+            f'docker compose -f {compose_path} up -d',
             cwd=client_dir
         )
         
@@ -341,14 +385,26 @@ def deploy_instance(client_id, plan, company_name='', contact_email='', apis=Non
         import time
         time.sleep(10)
         
-        # Copiar workflows
+        # Copiar e inyectar credenciales en workflows
         workflows_source = '/workflows'
+        workflows_dest = os.path.join(client_dir, 'workflows')
+        
+        from workflow_injector import inject_credentials_into_workflow, create_n8n_credentials_file
+        
         for workflow_path in plan_config['workflows']:
             source = os.path.join(workflows_source, workflow_path)
             if os.path.exists(source):
                 import shutil
-                dest = os.path.join(client_dir, 'workflows', os.path.basename(workflow_path))
+                dest = os.path.join(workflows_dest, os.path.basename(workflow_path))
                 shutil.copy2(source, dest)
+                
+                # Inyectar credenciales en el workflow si se proporcionaron APIs
+                if apis:
+                    inject_credentials_into_workflow(dest, apis)
+        
+        # Crear archivo de credenciales de n8n si se proporcionaron APIs
+        if apis:
+            create_n8n_credentials_file(client_dir, apis)
         
         # Crear instancia en BD
         instance = Instance(
@@ -499,12 +555,13 @@ def api_instance_action(instance_id, action):
     
     instance = Instance.query.get_or_404(instance_id)
     client_dir = os.path.join(N8N_BASE_PATH, instance.client_id)
+    compose_file = os.path.join(client_dir, 'docker-compose.yml')
     
     actions_map = {
-        'start': f'cd {client_dir} && docker-compose start',
-        'stop': f'cd {client_dir} && docker-compose stop',
-        'restart': f'cd {client_dir} && docker-compose restart',
-        'delete': f'cd {client_dir} && docker-compose down -v'
+        'start': f'docker compose -f {compose_file} start',
+        'stop': f'docker compose -f {compose_file} stop',
+        'restart': f'docker compose -f {compose_file} restart',
+        'delete': f'docker compose -f {compose_file} down -v'
     }
     
     if action not in actions_map:
