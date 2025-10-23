@@ -155,15 +155,19 @@ def generate_password(length=16):
 def run_command(cmd, cwd=None):
     """Ejecutar comando shell"""
     try:
+        # Usar bash explícitamente en lugar de sh para mejor compatibilidad
         result = subprocess.run(
             cmd,
             shell=True,
             cwd=cwd,
             capture_output=True,
             text=True,
-            timeout=300
+            timeout=300,
+            executable='/bin/bash'  # Usar bash explícitamente
         )
         return result.returncode == 0, result.stdout, result.stderr
+    except subprocess.TimeoutExpired:
+        return False, "", "Timeout: El comando tardó más de 5 minutos"
     except Exception as e:
         return False, "", str(e)
 
@@ -347,6 +351,13 @@ def deploy_instance(client_id, plan, company_name='', contact_email='', apis=Non
         os.makedirs(client_dir, exist_ok=True)
         os.makedirs(os.path.join(client_dir, 'workflows'), exist_ok=True)
         
+        # Verificar que el directorio se creó correctamente
+        if not os.path.exists(client_dir):
+            return False, f"No se pudo crear el directorio {client_dir}"
+        
+        # Dar permisos correctos
+        os.chmod(client_dir, 0o755)
+        
         # Generar credenciales y archivo .env
         env_content, admin_password = create_env_file(
             client_id, plan_config, 
@@ -373,9 +384,9 @@ def deploy_instance(client_id, plan, company_name='', contact_email='', apis=Non
             yaml.dump(compose_data, f, default_flow_style=False)
         
         # Iniciar servicios con Docker Compose V2
+        # Cambiar al directorio del cliente y ejecutar docker compose
         success, stdout, stderr = run_command(
-            f'docker compose -f {compose_path} up -d',
-            cwd=client_dir
+            f'cd {client_dir} && docker compose -f docker-compose.yml up -d'
         )
         
         if not success:
@@ -555,13 +566,12 @@ def api_instance_action(instance_id, action):
     
     instance = Instance.query.get_or_404(instance_id)
     client_dir = os.path.join(N8N_BASE_PATH, instance.client_id)
-    compose_file = os.path.join(client_dir, 'docker-compose.yml')
     
     actions_map = {
-        'start': f'docker compose -f {compose_file} start',
-        'stop': f'docker compose -f {compose_file} stop',
-        'restart': f'docker compose -f {compose_file} restart',
-        'delete': f'docker compose -f {compose_file} down -v'
+        'start': f'cd {client_dir} && docker compose start',
+        'stop': f'cd {client_dir} && docker compose stop',
+        'restart': f'cd {client_dir} && docker compose restart',
+        'delete': f'cd {client_dir} && docker compose down -v'
     }
     
     if action not in actions_map:
