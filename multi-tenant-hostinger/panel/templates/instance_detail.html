@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ instance.client_id }} - NEXO IA</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem 2rem; }
+        .nav { background: white; padding: 1rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 2rem; }
+        .nav a { color: #333; text-decoration: none; font-weight: 500; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
+        .card { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .badge.active { background: #d1fae5; color: #065f46; }
+        .badge.premium { background: #dbeafe; color: #1e40af; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+        .info-item { padding: 1rem; background: #f9fafb; border-radius: 6px; }
+        .info-item label { font-size: 0.875rem; color: #6b7280; font-weight: 600; display: block; margin-bottom: 0.5rem; }
+        .info-item .value { font-size: 1.125rem; color: #111827; font-weight: 500; }
+        .actions { display: flex; gap: 1rem; margin: 1.5rem 0; flex-wrap: wrap; }
+        .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .credentials-box { background: #fef3c7; border: 2px solid #f59e0b; padding: 1.5rem; border-radius: 6px; }
+        .credentials-box .cred-item { margin: 0.75rem 0; font-family: monospace; }
+        .workflows-list { list-style: none; }
+        .workflows-list li { padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb; }
+        .workflows-list li:before { content: "✓ "; color: #10b981; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        table th { text-align: left; padding: 0.75rem; background: #f9fafb; font-weight: 600; color: #6b7280; }
+        table td { padding: 0.75rem; border-top: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Detalle de Instancia: {{ instance.client_id }}</h1>
+    </div>
+
+    <div class="nav">
+        <a href="/">← Volver al Dashboard</a>
+    </div>
+
+    <div class="container">
+        <!-- Información General -->
+        <div class="card">
+            <h2 style="margin-bottom: 1rem;">Información General</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Cliente ID</label>
+                    <div class="value">{{ instance.client_id }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Empresa</label>
+                    <div class="value">{{ instance.company_name or '-' }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Plan</label>
+                    <div class="value"><span class="badge {{ instance.plan }}">{{ instance.plan.upper() }}</span></div>
+                </div>
+                <div class="info-item">
+                    <label>Estado</label>
+                    <div class="value"><span class="badge {{ instance.status }}">{{ instance.status }}</span></div>
+                </div>
+                <div class="info-item">
+                    <label>URL de Acceso</label>
+                    <div class="value"><a href="{{ instance.url }}" target="_blank">{{ instance.url }}</a></div>
+                </div>
+                <div class="info-item">
+                    <label>Creado</label>
+                    <div class="value">{{ instance.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button onclick="window.open('{{ instance.url }}', '_blank')" class="btn btn-primary">
+                    🚀 Abrir n8n
+                </button>
+                <button onclick="restartInstance()" class="btn btn-warning">
+                    🔄 Reiniciar
+                </button>
+                <button onclick="stopInstance()" class="btn btn-danger">
+                    ⏹️ Detener
+                </button>
+                <button onclick="backupInstance()" class="btn btn-success">
+                    💾 Backup
+                </button>
+            </div>
+        </div>
+
+        <!-- Credenciales -->
+        <div class="card">
+            <h2 style="margin-bottom: 1rem;">🔑 Credenciales de Acceso</h2>
+            <div class="credentials-box">
+                <div class="cred-item">
+                    <strong>Usuario:</strong> {{ instance.admin_user }}
+                </div>
+                <div class="cred-item">
+                    <strong>Contraseña:</strong> {{ instance.admin_password }}
+                </div>
+                {% if instance.evolution_url %}
+                <hr style="margin: 1rem 0;">
+                <div class="cred-item">
+                    <strong>Evolution API:</strong> <a href="{{ instance.evolution_url }}" target="_blank">{{ instance.evolution_url }}</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Configuración del Plan -->
+        <div class="card">
+            <h2 style="margin-bottom: 1rem;">📦 Configuración del Plan {{ pack_config.name }}</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>CPU Límite</label>
+                    <div class="value">{{ pack_config.cpu }} cores</div>
+                </div>
+                <div class="info-item">
+                    <label>Memoria Límite</label>
+                    <div class="value">{{ pack_config.memory }}</div>
+                </div>
+                <div class="info-item">
+                    <label>PostgreSQL</label>
+                    <div class="value">{{ '✅ Sí' if instance.use_postgres else '❌ No' }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Evolution API</label>
+                    <div class="value">{{ '✅ Sí' if instance.has_evolution else '❌ No' }}</div>
+                </div>
+            </div>
+
+            <h3 style="margin: 1.5rem 0 0.75rem 0;">Workflows Incluidos:</h3>
+            <ul class="workflows-list">
+                {% for workflow in pack_config.workflows %}
+                <li>{{ workflow.split('/')[-1].replace('.json', '').replace('_', ' ') }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- APIs Configuradas -->
+        <div class="card">
+            <h2 style="margin-bottom: 1rem;">🔌 APIs Configuradas</h2>
+            {% if credentials %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Servicio</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cred in credentials %}
+                    <tr>
+                        <td><strong>{{ cred.service }}</strong></td>
+                        <td>
+                            <span class="badge {{ 'active' if cred.is_configured else 'inactive' }}">
+                                {{ '✅ Configurado' if cred.is_configured else '❌ No configurado' }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.875rem;">
+                                Editar
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #6b7280;">No hay APIs configuradas aún.</p>
+            {% endif %}
+
+            <h3 style="margin: 1.5rem 0 0.75rem 0;">APIs Requeridas:</h3>
+            <ul class="workflows-list">
+                {% for api in pack_config.required_apis %}
+                <li>{{ api.replace('_', ' ').title() }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Información Técnica -->
+        <div class="card">
+            <h2 style="margin-bottom: 1rem;">🛠️ Información Técnica</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Contenedor</label>
+                    <div class="value" style="font-family: monospace;">n8n_{{ instance.client_id }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Directorio</label>
+                    <div class="value" style="font-family: monospace;">/srv/n8n/{{ instance.client_id }}</div>
+                </div>
+                {% if instance.postgres_db %}
+                <div class="info-item">
+                    <label>Base de Datos</label>
+                    <div class="value" style="font-family: monospace;">{{ instance.postgres_db }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <h3 style="margin: 1.5rem 0 0.75rem 0;">Comandos útiles:</h3>
+            <pre style="background: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 6px; overflow-x: auto;">
+cd /srv/n8n/{{ instance.client_id }}
+
+# Ver logs
+docker-compose logs -f
+
+# Reiniciar
+docker-compose restart
+
+# Backup
+docker-compose exec n8n_{{ instance.client_id }} tar -czf /tmp/backup.tar.gz /home/node/.n8n
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        function restartInstance() {
+            if (confirm('¿Reiniciar esta instancia?')) {
+                fetch('/api/instances/{{ instance.id }}/action/restart', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        alert(data.success ? '✅ Instancia reiniciada' : '❌ Error: ' + data.error);
+                        if (data.success) location.reload();
+                    });
+            }
+        }
+
+        function stopInstance() {
+            if (confirm('⚠️ ¿Detener esta instancia? El cliente no podrá acceder hasta que la reinicies.')) {
+                fetch('/api/instances/{{ instance.id }}/action/stop', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        alert(data.success ? '✅ Instancia detenida' : '❌ Error: ' + data.error);
+                        if (data.success) location.reload();
+                    });
+            }
+        }
+
+        function backupInstance() {
+            alert('Ejecuta manualmente:\ncd /srv/n8n/{{ instance.client_id }}\ndocker-compose exec n8n_{{ instance.client_id }} tar -czf /tmp/backup.tar.gz /home/node/.n8n');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Instancia - NEXO IA</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header h1 { font-size: 1.8rem; }
+        .nav { background: white; padding: 1rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 2rem; }
+        .nav a { color: #333; text-decoration: none; font-weight: 500; }
+        .nav a:hover { color: #667eea; }
+        .container { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
+        .card { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 2rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 1rem; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; }
+        .form-group small { color: #6b7280; font-size: 0.875rem; }
+        .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .plan-card { border: 3px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; cursor: pointer; transition: all 0.2s; position: relative; }
+        .plan-card:hover { border-color: #667eea; transform: translateY(-2px); }
+        .plan-card.selected { border-color: #667eea; background: #f0f4ff; }
+        .plan-card input[type="radio"] { position: absolute; top: 1rem; right: 1rem; }
+        .plan-card h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .plan-card .price { font-size: 2rem; font-weight: 700; color: #667eea; margin-bottom: 1rem; }
+        .plan-card .price span { font-size: 1rem; color: #6b7280; }
+        .plan-card ul { list-style: none; }
+        .plan-card li { padding: 0.4rem 0; color: #4b5563; }
+        .plan-card li:before { content: "✓ "; color: #10b981; font-weight: bold; }
+        .collapsible { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; cursor: pointer; }
+        .collapsible:hover { background: #f3f4f6; }
+        .collapsible-content { display: none; padding: 1rem 0 0 0; }
+        .collapsible.active .collapsible-content { display: block; }
+        .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .btn-primary { background: #667eea; color: white; width: 100%; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .loading { display: none; text-align: center; padding: 2rem; }
+        .loading.active { display: block; }
+        .result { display: none; padding: 1.5rem; border-radius: 6px; margin-top: 1rem; }
+        .result.success { background: #d1fae5; border: 2px solid #10b981; color: #065f46; }
+        .result.error { background: #fee2e2; border: 2px solid #ef4444; color: #991b1b; }
+        .result.active { display: block; }
+        .credentials { background: #fef3c7; border: 2px solid #f59e0b; padding: 1rem; border-radius: 6px; margin-top: 1rem; }
+        .credentials strong { color: #92400e; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Nueva Instancia n8n</h1>
+    </div>
+
+    <div class="nav">
+        <a href="/">← Volver al Dashboard</a>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2 style="margin-bottom: 1.5rem;">Crear Nueva Instancia para Cliente</h2>
+
+            <form id="instanceForm" method="POST">
+                <!-- Información del Cliente -->
+                <div class="form-group">
+                    <label>Cliente ID *</label>
+                    <input type="text" name="client_id" required pattern="[a-z0-9-]+" 
+                           placeholder="ejemplo: empresa-abc">
+                    <small>Solo letras minúsculas, números y guiones. Será usado en la URL.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre de la Empresa</label>
+                    <input type="text" name="company_name" placeholder="Empresa ABC S.L.">
+                </div>
+
+                <div class="form-group">
+                    <label>Email de Contacto</label>
+                    <input type="email" name="contact_email" placeholder="contacto@empresa.com">
+                </div>
+
+                <div class="form-group">
+                    <label>Teléfono de Contacto</label>
+                    <input type="tel" name="contact_phone" placeholder="+34 666 777 888">
+                </div>
+
+                <!-- Selección de Plan -->
+                <h3 style="margin: 2rem 0 1rem 0;">Selecciona el Plan</h3>
+                <div class="plans">
+                    <label class="plan-card" onclick="selectPlan('estandar')">
+                        <input type="radio" name="plan" value="estandar" required>
+                        <h3>🟢 Estándar</h3>
+                        <div class="price">$99<span>/mes</span></div>
+                        <ul>
+                            <li>Agente WhatsApp</li>
+                            <li>Agente Gmail</li>
+                            <li>Captación de Leads</li>
+                            <li>1 CPU | 2GB RAM</li>
+                        </ul>
+                    </label>
+
+                    <label class="plan-card" onclick="selectPlan('premium')">
+                        <input type="radio" name="plan" value="premium" required>
+                        <h3>🟡 Premium</h3>
+                        <div class="price">$199<span>/mes</span></div>
+                        <ul>
+                            <li>Todo Estándar +</li>
+                            <li>Voice WhatsApp</li>
+                            <li>Email Icebreaker</li>
+                            <li>Facturas automáticas</li>
+                            <li>PostgreSQL incluido</li>
+                            <li>1.5 CPU | 3GB RAM</li>
+                        </ul>
+                    </label>
+
+                    <label class="plan-card" onclick="selectPlan('nexa')">
+                        <input type="radio" name="plan" value="nexa" required>
+                        <h3>🔵 NEXA</h3>
+                        <div class="price">$399<span>/mes</span></div>
+                        <ul>
+                            <li>Todo Premium +</li>
+                            <li>Personal Assistant</li>
+                            <li>Videos VEO 3</li>
+                            <li>Análisis empresarial</li>
+                            <li>Evolution API incluido</li>
+                            <li>2 CPU | 4GB RAM</li>
+                        </ul>
+                    </label>
+                </div>
+
+                <!-- Configuración de APIs (Opcional) -->
+                <div class="collapsible" onclick="toggleCollapsible(this)">
+                    <strong>⚙️ Configuración de APIs (Opcional)</strong>
+                    <small style="display: block; color: #6b7280;">Puedes configurar esto después desde el panel</small>
+                    <div class="collapsible-content">
+                        <div class="form-group">
+                            <label>OpenAI API Key</label>
+                            <input type="text" name="openai_key" placeholder="sk-...">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Evolution API URL</label>
+                            <input type="url" name="evolution_url" placeholder="https://evolution.example.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Evolution API Key</label>
+                            <input type="text" name="evolution_key" placeholder="xxxxx">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Airtable PAT</label>
+                            <input type="text" name="airtable_pat" placeholder="pat...">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Telegram Bot Token</label>
+                            <input type="text" name="telegram_token" placeholder="123456:ABC-DEF...">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">🚀 Crear Instancia</button>
+            </form>
+
+            <div class="loading" id="loading">
+                <h3>⏳ Creando instancia...</h3>
+                <p>Esto puede tomar 1-2 minutos. No cierres esta página.</p>
+            </div>
+
+            <div class="result" id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        function selectPlan(plan) {
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+
+        function toggleCollapsible(element) {
+            element.classList.toggle('active');
+        }
+
+        document.getElementById('instanceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Mostrar loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('result').classList.remove('active');
+            e.target.style.display = 'none';
+            
+            try {
+                const response = await fetch('/instances/new', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('loading').classList.remove('active');
+                const resultDiv = document.getElementById('result');
+                resultDiv.classList.add('active');
+                
+                if (result.success) {
+                    resultDiv.classList.add('success');
+                    resultDiv.innerHTML = `
+                        <h3>✅ ¡Instancia creada exitosamente!</h3>
+                        <div class="credentials">
+                            <p><strong>URL:</strong> <a href="${result.data.url}" target="_blank">${result.data.url}</a></p>
+                            <p><strong>Usuario:</strong> ${result.data.admin_user}</p>
+                            <p><strong>Contraseña:</strong> <code>${result.data.admin_password}</code></p>
+                            ${result.data.evolution_url ? `
+                                <hr style="margin: 1rem 0;">
+                                <p><strong>Evolution API:</strong> <a href="${result.data.evolution_url}" target="_blank">${result.data.evolution_url}</a></p>
+                                <p><strong>API Key:</strong> <code>${result.data.evolution_key}</code></p>
+                            ` : ''}
+                        </div>
+                        <p style="margin-top: 1rem;">
+                            <strong>⚠️ IMPORTANTE:</strong> Guarda estas credenciales en un lugar seguro.
+                        </p>
+                        <br>
+                        <a href="/" class="btn btn-primary">Volver al Dashboard</a>
+                    `;
+                } else {
+                    resultDiv.classList.add('error');
+                    resultDiv.innerHTML = `
+                        <h3>❌ Error al crear instancia</h3>
+                        <p>${result.error}</p>
+                        <br>
+                        <button onclick="location.reload()" class="btn btn-secondary">Reintentar</button>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('loading').classList.remove('active');
+                const resultDiv = document.getElementById('result');
+                resultDiv.classList.add('active', 'error');
+                resultDiv.innerHTML = `
+                    <h3>❌ Error de conexión</h3>
+                    <p>${error.message}</p>
+                    <br>
+                    <button onclick="location.reload()" class="btn btn-secondary">Reintentar</button>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

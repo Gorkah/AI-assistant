@@ -1,0 +1,89 @@
+version: '3.8'
+
+# ================================================
+# NEXO IA - Panel de Control Multi-Tenant
+# Adaptado para Hostinger VPS con Traefik
+# ================================================
+
+services:
+  # ================================================
+  # POSTGRESQL - Base de datos compartida
+  # ================================================
+  postgres_shared:
+    image: postgres:15-alpine
+    container_name: nexo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:-nexo_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - root_default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER:-nexo_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================================
+  # REDIS - Cache compartido
+  # ================================================
+  redis_shared:
+    image: redis:7-alpine
+    container_name: nexo_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - root_default
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================================
+  # PANEL DE CONTROL WEB
+  # ================================================
+  panel_control:
+    build: ./panel
+    container_name: nexo_panel
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_ADMIN_USER:-nexo_admin}:${POSTGRES_ADMIN_PASSWORD}@postgres_shared:5432/nexo_control
+      - SECRET_KEY=${PANEL_SECRET_KEY}
+      - BASE_DOMAIN=${BASE_DOMAIN:-srv869945.hstgr.cloud}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis_shared:6379/0
+      - PANEL_ADMIN_USER=${PANEL_ADMIN_USER:-admin}
+      - PANEL_ADMIN_PASSWORD=${PANEL_ADMIN_PASSWORD}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /srv/n8n:/srv/n8n
+      - ./workflows:/workflows:ro
+      - ./config:/config:ro
+    networks:
+      - root_default
+    depends_on:
+      postgres_shared:
+        condition: service_healthy
+      redis_shared:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nexo-panel.rule=Host(`panel.${BASE_DOMAIN:-srv869945.hstgr.cloud}`)"
+      - "traefik.http.routers.nexo-panel.entrypoints=websecure"
+      - "traefik.http.routers.nexo-panel.tls=true"
+      - "traefik.http.routers.nexo-panel.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.nexo-panel.loadbalancer.server.port=5000"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  root_default:
+    external: true

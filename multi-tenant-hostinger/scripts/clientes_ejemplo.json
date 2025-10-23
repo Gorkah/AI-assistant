@@ -1,0 +1,43 @@
+{
+  "clientes": [
+    {
+      "client_id": "empresa-demo-1",
+      "plan": "estandar",
+      "company_name": "Empresa Demo 1 S.L.",
+      "contact_email": "contacto@empresa1.com",
+      "contact_phone": "+34 666 111 111",
+      "apis": {
+        "openai_key": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "evolution_url": "https://evolution.example.com",
+        "evolution_key": "xxxxx-xxxxx-xxxxx"
+      }
+    },
+    {
+      "client_id": "empresa-demo-2",
+      "plan": "premium",
+      "company_name": "Empresa Demo 2 S.A.",
+      "contact_email": "contacto@empresa2.com",
+      "contact_phone": "+34 666 222 222",
+      "apis": {
+        "openai_key": "sk-yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+        "evolution_url": "https://evolution.example.com",
+        "evolution_key": "yyyyy-yyyyy-yyyyy",
+        "airtable_pat": "patxxxxxxxxxxxxxxx.yyyyyyyyyyyyyyy"
+      }
+    },
+    {
+      "client_id": "empresa-demo-3",
+      "plan": "nexa",
+      "company_name": "Empresa Demo 3 Corp",
+      "contact_email": "contacto@empresa3.com",
+      "contact_phone": "+34 666 333 333",
+      "apis": {
+        "openai_key": "sk-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "evolution_url": "https://evolution.example.com",
+        "evolution_key": "zzzzz-zzzzz-zzzzz",
+        "airtable_pat": "patzzzzzzzzzzzzzz.zzzzzzzzzzzzzzz",
+        "telegram_token": "123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
+      }
+    }
+  ]
+}
